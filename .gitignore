@@ -1,0 +1,11 @@
+Binaries/
+.settings/
+Startup/
+Debug/
+*launch
+.project
+.cproject
+*.mk
+*.s
+*.Id
+*.list
