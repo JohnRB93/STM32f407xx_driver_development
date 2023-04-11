@@ -497,6 +497,8 @@ typedef struct
 #define GPIO_PIN_RESET		RESET
 #define FLAG_SET			SET
 #define FLAG_RESET			RESET
+#define INTERRUPT_ENABLE	ENABLE
+#define INTERRUPT_DISABLE	DISABLE
 
 #define _32MHZ		32000000U
 #define _16MHZ		16000000U

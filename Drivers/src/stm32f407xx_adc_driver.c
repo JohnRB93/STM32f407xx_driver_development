@@ -4,6 +4,7 @@
 
 static void ADC_ConverterSwitch(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
 static void ADC_ConfigPreScaler(ADC_RegDef_t *pADCx, uint8_t prescaler);
+static void ADC_ConfigBitRes(ADC_RegDef_t *pADCx, uint8_t resolution);
 static void ADC_ConfigDataAlign(ADC_RegDef_t *pADCx, uint8_t dataAlign);
 static void ADC_ConfigIt(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
 static void ADC_ConfigWtDg(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
@@ -31,6 +32,7 @@ void ADC_Init(ADC_Handle_t *pADC_Handle)
 	ADC_PeriClockControl(pADC_Handle->pADCx, ENABLE);
 	ADC_ConverterSwitch(pADC_Handle->pADCx, ENABLE);
 	ADC_ConfigPreScaler(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_ClkPreSclr);
+	ADC_ConfigBitRes(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_BitRes);
 	ADC_ConfigDataAlign(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_DataAlign);
 	ADC_ConfigIt(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_ItEnable);
 	ADC_ConfigWtDg(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_WtDgEnable);
@@ -166,11 +168,49 @@ void ADC_ChannelSelection(ADC_RegDef_t *pADCx, uint8_t convGroup, uint8_t conver
 						default:  pADCx->JSQR |= (channels[i] << ADC_JSQR_JSQ3);  break;
 					}
 				}else
-				{
 					pADCx->JSQR |= (channels[i] << ADC_JSQR_JSQ4);
-				}
 			}
 		}
+	}
+}
+
+/*
+ * @fn			- ADC_ConfigSampRate
+ *
+ * @brief		- This function configures the sample rate for the given
+ * 				  analog channel.
+ *
+ * @param[ADC_RegDef_t*]	- Base address of the ADC Register.
+ * @param[uint8_t]			- ADC channel (ADC_IN0, ... ADC_IN18).
+ * @param[uint8_t]			- Sampling time (ADC_003_CYCLES, ... ADC_480_CYCLES).
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void ADC_ConfigSampRate(ADC_RegDef_t *pADCx, uint8_t channel, uint8_t cycles)
+{
+	switch(channel)
+	{
+		case ADC_IN0 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP0);  break;
+		case ADC_IN1 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP1);  break;
+		case ADC_IN2 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP2);  break;
+		case ADC_IN3 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP3);  break;
+		case ADC_IN4 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP4);  break;
+		case ADC_IN5 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP5);  break;
+		case ADC_IN6 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP6);  break;
+		case ADC_IN7 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP7);  break;
+		case ADC_IN8 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP8);  break;
+		case ADC_IN9 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP9);  break;
+		case ADC_IN10: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP10); break;
+		case ADC_IN11: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP11); break;
+		case ADC_IN12: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP12); break;
+		case ADC_IN13: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP13); break;
+		case ADC_IN14: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP14); break;
+		case ADC_IN15: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP15); break;
+		case ADC_IN16: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP16); break;
+		case ADC_IN17: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP17); break;
+		case ADC_IN18: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP18); break;
 	}
 }
 
@@ -182,25 +222,42 @@ void ADC_ChannelSelection(ADC_RegDef_t *pADCx, uint8_t convGroup, uint8_t conver
  * 				  injected group. Converted data will be stored in
  * 				  the data register.
  *
- * @param[ADC_RegDef_t*]	- Base address of the ADC register.
+ * @param[ADC_Handle_t*]	- Base address of the ADC Handle.
  * @param[uint8_t]			- REGULAR_GROUP or INJECTED_GROUP macros.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void ADC_StartSingleConv(ADC_RegDef_t *pADCx, uint8_t group)
+void ADC_StartSingleConv(ADC_Handle_t *ADC_Handle, uint8_t group)
 {
-	pADCx->CR2 &= ~(1 << ADC_CR2_CONT);
-	if(group == ADC_REGULAR_GROUP)
-	{//Single conversion of a channel from the regular group.
-		pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
-		pADCx->SR &= ~(1 << ADC_SR_STRT);
+	if(ADC_Handle->ADC_Config.ADC_ItEnable == INTERRUPT_DISABLE)
+	{//Interrupts NOT enabled.
+		ADC_Handle->pADCx->CR2 &= ~(1 << ADC_CR2_CONT);
+		if(group == ADC_REGULAR_GROUP)
+		{//Single conversion of a channel from the regular group.
+			ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
+			ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_STRT);
+		}else
+		{//Single conversion of a channel from the injection group.
+			ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_JSWSTART);
+			ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_JSTRT);
+		}
 	}else
-	{//Single conversion of a channel from the injection group.
-		pADCx->CR2 |= (1 << ADC_CR2_JSWSTART);
-		pADCx->SR &= ~(1 << ADC_SR_JSTRT);
-		pADCx->SR &= ~(1 << ADC_SR_JEOC);
+	{//Interrupts enabled.
+		ADC_Handle->pADCx->CR2 &= ~(1 << ADC_CR2_CONT);
+		if(group == ADC_REGULAR_GROUP)
+		{//Single conversion of a channel from the regular group.
+			ADC_Handle->pADCx->CR2 &= ~(1 << ADC_CR2_EOCS);
+			ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
+			ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_STRT);
+			ADC_Handle->ADC_It_Flag = ADC_EOC_FLAG_SET;
+		}else
+		{//Single conversion of a channel from the injection group.
+			ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_JSWSTART);
+			ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_JSTRT);
+			ADC_Handle->ADC_It_Flag = ADC_JEOC_FLAG_SET;
+		}
 	}
 }
 
@@ -220,10 +277,20 @@ void ADC_StartSingleConv(ADC_RegDef_t *pADCx, uint8_t group)
  * 				  to be converted automatically after regular channels in
  * 				  continuous mode (using JAUTO bit).
  */
-void ADC_StartContConv(ADC_RegDef_t *pADCx)
+void ADC_StartContConv(ADC_Handle_t *ADC_Handle)
 {
-	pADCx->CR2 |= (1 << ADC_CR2_CONT);
-	pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
+	if(ADC_Handle->ADC_Config.ADC_ItEnable == ADC_INTERRUPT_DISABLE)
+	{//No interrupts enabled.
+		ADC_Handle->pADCx->CR2 &= ~(1 << ADC_CR2_EOCS);
+		ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_CONT);
+		ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
+	}else
+	{//Interrupts enabled.
+		ADC_Handle->pADCx->CR2 &= ~(1 << ADC_CR2_EOCS);
+		ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_CONT);
+		ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
+	}
+
 }
 
 /*
@@ -338,18 +405,49 @@ void ADC_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority)
  *
  * @return		- None.
  *
- * @note		- None.
+ * @note		- The interrupt bits(OVRIE, EOCIE, JEOCIE, AWDIE) must
+ * 				  be set in order for an interrupt to be triggered.
  */
 void ADC_IRQHandling(ADC_Handle_t *ADC_Handle)
 {
-	if(ADC_Handle->pADCx->SR &= (1 << ADC_SR_EOC))
+	if(ADC_Handle->ADC_It_Flag == ADC_EOC_FLAG_SET)
+	{//End of Conversion flag.
 		ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_EOC);
+		if(ADC_Handle->ADC_Config.ADC_DMAEnable == ADC_DMA_ENABLE)
+		{//The DMA for ADC is enabled.
+			//TODO: Implement
+		}
+		ADC_Handle->ADC_It_Flag = ADC_NO_FLAG_SET;
+	}
 
-	if(ADC_Handle->pADCx->SR &= (1 << ADC_SR_JEOC))
+	if(ADC_Handle->ADC_It_Flag == ADC_JEOC_FLAG_SET)
+	{//End of Injected Conversion flag.
 		ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_JEOC);
+		if(ADC_Handle->ADC_Config.ADC_DMAEnable == ADC_DMA_ENABLE)
+		{//The DMA for ADC is enabled.
+			//TODO: Implement
+		}
 
-	if(ADC_Handle->pADCx->SR &= (1 << ADC_SR_OVR))
-		ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_OVR);
+		ADC_Handle->ADC_It_Flag = ADC_NO_FLAG_SET;
+	}
+
+	if(ADC_Handle->ADC_It_Flag == ADC_AWD_FLAG_SET)
+	{//Analog Watchdog flag.
+		if(ADC_Handle->ADC_Config.ADC_DMAEnable == ADC_DMA_ENABLE)
+		{//The DMA for ADC is enabled.
+			//TODO: Implement
+		}
+		ADC_Handle->ADC_It_Flag = ADC_NO_FLAG_SET;
+	}
+
+	if(ADC_Handle->ADC_It_Flag == ADC_OVR_FLAG_SET)
+	{//Overrun flag.
+		if(ADC_Handle->ADC_Config.ADC_DMAEnable == ADC_DMA_ENABLE)
+		{//The DMA for ADC is enabled.
+			//TODO: Implement
+		}
+		ADC_Handle->ADC_It_Flag = ADC_NO_FLAG_SET;
+	}
 }
 
 /***************************************************************************************/
@@ -380,6 +478,12 @@ static void ADC_ConfigPreScaler(ADC_RegDef_t *pADCx, uint8_t prescaler)
 		case ADC_PCLK_DIV8: pADCx->CCR |= (ADC_PCLK_DIV8 << ADC_CCR_ADCPRE); break;
 		default: pADCx->CCR |= (ADC_PCLK_DIV2 << ADC_CCR_ADCPRE); break;
 	}
+}
+
+//Configures the bit resolution.
+static void ADC_ConfigBitRes(ADC_RegDef_t *pADCx, uint8_t resolution)
+{
+	pADCx->CR1 |= (resolution << ADC_CR1_RES);
 }
 
 //Configures the data alignment in the data register.

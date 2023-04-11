@@ -65,6 +65,8 @@ int main(void)
 	while(1)
 	{
 		dataStruct = DATA_ADDR;
+		dataStruct->phoData = 0;
+		dataStruct->potData = 0;
 		dma.transCompleted = 0;
 		ADC_ChannelSelection(ADC_IN.pADCx, RG, ADC_02_CONVERSIONS, channel, 2);
 		ADC_StartContConv(ADC_IN.pADCx);
