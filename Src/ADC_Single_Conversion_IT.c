@@ -36,9 +36,6 @@ int main(void)
 	GPIO_Config();
 	ADC_Config();
 
-
-
-
 	while(1)
 	{
 #ifdef RG
@@ -101,7 +98,7 @@ void ADC_Config(void)
 {
 	ADC_IN.pADCx = ADC1;
 	ADC_IN.ADC_Config.ADC_BitRes = ADC_12BIT_RESOLUTION;
-	ADC_IN.ADC_Config.ADC_SampTime = ADC_084_CYCLES;
+	ADC_IN.ADC_Config.ADC_SampTime = ADC_003_CYCLES;
 	ADC_IN.ADC_Config.ADC_ClkPreSclr = ADC_PCLK_DIV2;
 	ADC_IN.ADC_Config.ADC_ConvMode = ADC_SINL_CONV_MODE;
 	ADC_IN.ADC_Config.ADC_DataAlign = ADC_DATA_ALIGNMENT_RIGHT;

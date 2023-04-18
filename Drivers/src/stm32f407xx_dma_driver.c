@@ -4,7 +4,6 @@
 
 /***************** Private Helper Function Headers *************************************/
 
-static void DMA_ClearEN_Bit(DMA_RegDef_t *pDMAx, uint8_t reqStream);
 static void DMA_ConfigPeripheralAddress(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint32_t periAddress);
 static void DMA_ConfigMemoryAddresses(DMA_Handle_t *DMA_Handle, uint8_t reqStream, uint32_t memAddress);
 static void DMA_ConfigItemsToTransfer(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t itemsToTransfer);
@@ -17,9 +16,13 @@ static void DMA_ConfigBurstTransType(DMA_RegDef_t *pDMAx, uint8_t reqStream, uin
 static void DMA_ConfigDataWidths(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t msize, uint8_t psize);
 static void DMA_ConfigCircularMode(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t EnOrDi);
 static void DMA_ConfigDoubleBuffMode(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t EnOrDi);
-static void DMA_ConfigInterrupts(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t EnOrDi);
-static void DMA_ActivateStream(DMA_RegDef_t *pDMAx, uint8_t reqStream);
-static void DMA_HandleTransCmptIt(DMA_RegDef_t *pDMAx, uint16_t *data);
+
+/*** Private Helper Function Headers for IRQ Handling ***/
+static void DMA_HandleHalfTransCmptIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream);
+static void DMA_HandleTransCmptIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream);
+static void DMA_HandleTransErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream);
+static void DMA_HandleFIFOErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream);
+static void DMA_HandleDirectErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream);
 
 /***************************************************************************************/
 
@@ -83,9 +86,7 @@ void DMA_PeriClockControl(DMA_RegDef_t *pDMAx, uint8_t EnOrDi)
  * @param[uint8_t]			- Request Stream Number. (REQ_STREAM_0, ... REQ_STREAM_7)
  * @param[uint32_t]			- Peripheral Address.
  * @param[uint32_t]			- Memory Address.
- * @param[uint16_t]			- Total number of items to transfer.
  * @param[uint8_t]			- Request Stream Channel.(REQ_STR_CH_0, ... REQ_STR_CH_7)
- * @param[uint8_t]			- FIFO enable or disable. (ENABLE, DISABLE)
  *
  * @return		- None.
  *
@@ -106,16 +107,13 @@ void DMA_ConfigStream(DMA_Handle_t *DMA_Handle, uint8_t reqStream, uint32_t peri
 	DMA_ConfigBurstTransType(DMA_Handle->pDMAx, reqStream,
 			DMA_Handle->DMA_Config.DMA_MemBurstTransfer, DMA_Handle->DMA_Config.DMA_PeriBurstTransfer);
 	DMA_ConfigDataWidths(DMA_Handle->pDMAx, reqStream,
-			DMA_Handle->DMA_Config.DMA_MemoryDataWidth, DMA_Handle->DMA_Config.DMA_PeripheralDataWidth);
+			DMA_Handle->DMA_Config.DMA_SourceDataWidth, DMA_Handle->DMA_Config.DMA_DestinationDataWidth);
 	DMA_ConfigCircularMode(DMA_Handle->pDMAx, reqStream, DMA_Handle->DMA_Config.DMA_CircularMode);
 
 	if(DMA_Handle->DMA_Config.DMA_TransactionType == DMA_DOUBLE_BUFFER_TRANSACTION)
 		DMA_ConfigDoubleBuffMode(DMA_Handle->pDMAx, reqStream, ENABLE);
 	else//Regular Type Transatcion is used.
 		DMA_ConfigDoubleBuffMode(DMA_Handle->pDMAx, reqStream, DISABLE);
-
-	DMA_ConfigInterrupts(DMA_Handle->pDMAx,reqStream, DMA_Handle->DMA_Config.DMA_ItEnable);
-	DMA_ActivateStream(DMA_Handle->pDMAx, reqStream);
 }
 
 /*
@@ -143,28 +141,165 @@ void DMA_ConfigStream(DMA_Handle_t *DMA_Handle, uint8_t reqStream, uint32_t peri
 void DMA_findMburstBeatPsizeMsize(DMA_RegDef_t *pDMAx, uint8_t reqStream,
 		uint8_t *MburstBeat, uint8_t *psize, uint8_t *msize)
 {	//Find MburstBeat
-	if((pDMAx->SxCR[reqStream] &= (3 << DMA_SXCR_MBURST)) == DMA_INCR4)
+	if(((pDMAx->DMA_Sx[reqStream].SxCR >> DMA_SXCR_MBURST) & 0x3) == DMA_INCR4)
 		*MburstBeat = 4;
-	else if((pDMAx->SxCR[reqStream] &= (3 << DMA_SXCR_MBURST)) == DMA_INCR8)
+	else if(((pDMAx->DMA_Sx[reqStream].SxCR >> DMA_SXCR_MBURST) & 0x3) == DMA_INCR8)
 		*MburstBeat = 8;
-	else if((pDMAx->SxCR[reqStream] &= (3 << DMA_SXCR_MBURST)) == DMA_INCR16)
+	else if(((pDMAx->DMA_Sx[reqStream].SxCR >> DMA_SXCR_MBURST) & 0x3) == DMA_INCR16)
 		*MburstBeat = 16;
 	else
 		*MburstBeat = 1;
 	//Find psize
-	if((pDMAx->SxCR[reqStream] &= (3 << DMA_SXCR_PSIZE)) == DMA_HALF_WORD)
+	if(((pDMAx->DMA_Sx[reqStream].SxCR >> DMA_SXCR_PSIZE) & 0x3) == DMA_HALF_WORD)
 		*psize = 16;
-	else if((pDMAx->SxCR[reqStream] &= (3 << DMA_SXCR_PSIZE)) == DMA_WORD)
+	else if(((pDMAx->DMA_Sx[reqStream].SxCR >> DMA_SXCR_PSIZE) & 0x3) == DMA_WORD)
 		*psize = 32;
 	else
 		*psize = 8;
 	//Find msize
-	if((pDMAx->SxCR[reqStream] &= (3 << DMA_SXCR_MSIZE)) == DMA_HALF_WORD)
+	if(((pDMAx->DMA_Sx[reqStream].SxCR >> DMA_SXCR_MSIZE) & 0x3) == DMA_HALF_WORD)
 		*msize = 16;
-	else if((pDMAx->SxCR[reqStream] &= (3 << DMA_SXCR_MSIZE)) == DMA_WORD)
+	else if(((pDMAx->DMA_Sx[reqStream].SxCR >> DMA_SXCR_MSIZE) & 0x3) == DMA_WORD)
 		*msize = 32;
 	else
 		*psize = 8;
+}
+
+/*
+ * @fn			- DMA_IncrPeriPtr
+ *
+ * @brief		- This function increments the peripheral register address
+ * 				  according to the PSIZE bit in the SxCR register.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number. (REQ_STREAM_0, ... REQ_STREAM_7)
+ * @param[uint32_t*]		- Pointer to the peripheral register address.
+ *
+ * @return		- None.
+ *
+ * @note		- This function is useful when the peripheral pointer increment
+ * 				  mode is disabled.
+ */
+void DMA_IncrPeriPtr(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint32_t* periAddr)
+{
+	if(((pDMAx->DMA_Sx[reqStream].SxCR >> DMA_SXCR_PSIZE) & 0x3) == DMA_BYTE)
+		periAddr++;
+	else if(((pDMAx->DMA_Sx[reqStream].SxCR >> DMA_SXCR_PSIZE) & 0x3) == DMA_HALF_WORD)
+		periAddr += 2;
+	else
+		periAddr += 4;
+}
+
+/*
+ * @fn			- DMA_IncrMemPtr
+ *
+ * @brief		- This function increments the memory register address
+ * 				  according to the MSIZE bit in the SxCR register.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number. (REQ_STREAM_0, ... REQ_STREAM_7)
+ * @param[uint32_t*]		- Pointer to the memory register address.
+ *
+ * @return		- None.
+ *
+ * @note		- This function is useful when the memory pointer increment
+ * 				  mode is disabled.
+ */
+void DMA_IncrMemPtr(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint32_t* memAddr)
+{
+	if(((pDMAx->DMA_Sx[reqStream].SxCR >> DMA_SXCR_MSIZE) & 0x3) == DMA_BYTE)
+		memAddr++;
+	else if(((pDMAx->DMA_Sx[reqStream].SxCR >> DMA_SXCR_MSIZE) & 0x3) == DMA_HALF_WORD)
+		memAddr += 2;
+	else
+		memAddr += 4;
+}
+
+/*
+ * @fn			- DMA_ActivateStream
+ *
+ * @brief		- This function enables the EN bit in the SxCR register,
+ * 				  activating the stream for the stream number x.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number. (REQ_STREAM_0, ... REQ_STREAM_7)
+ *
+ * @return		- None.
+ *
+ * @note		- Only call this function after configuring the stream.
+ */
+void DMA_ActivateStream(DMA_RegDef_t *pDMAx, uint8_t reqStream)
+{
+	pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_EN);
+}
+
+/*
+ * @fn			- DMA_ClearEN_Bit
+ *
+ * @brief		- This function resets the EN bit in the SxCR register,
+ * 				  deactivating the stream for the stream number x.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number. (REQ_STREAM_0, ... REQ_STREAM_7)
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void DMA_ClearEN_Bit(DMA_RegDef_t *pDMAx, uint8_t reqStream)
+{
+	if((pDMAx->DMA_Sx[reqStream].SxCR & (1 << DMA_SXCR_EN)) == SET)
+	{//If the EN bit is set, then it must be cleared and wait until all
+	 //transfers have finished.
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_EN);
+		while((pDMAx->DMA_Sx[reqStream].SxCR & (1 << DMA_SXCR_EN)) == SET);
+	}
+}
+
+/*
+ * @fn			- DMA_ConfigInterrupts
+ *
+ * @brief		- This function enables or disables event/error interrupts
+ * 				  based on the interrupt settings in the DMA handle.
+ *
+ * @param[DMA_Handle_t*]	- Base address of the DMA Handle.
+ * @param[uint8_t]			- Request Stream Number. (REQ_STREAM_0, ... REQ_STREAM_7)
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void DMA_ConfigInterrupts(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
+{
+	//Check Half-Transfer control setting.
+	if(DMA_Handle->DMA_Config.DMA_ItEnable.DMA_HTIE == ENABLE)
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_HTIE);
+	else
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_HTIE);
+
+	//Check Transfer Complete control setting.
+	if(DMA_Handle->DMA_Config.DMA_ItEnable.DMA_TCIE == ENABLE)
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_TCIE);
+	else
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_TCIE);
+
+	//Check Transfer Error control setting.
+	if(DMA_Handle->DMA_Config.DMA_ItEnable.DMA_TEIE == ENABLE)
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_TEIE);
+	else
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_TEIE);
+
+	//Check FIFO Overrun/Underrun Error control setting.
+	if(DMA_Handle->DMA_Config.DMA_ItEnable.DMA_FEIE == ENABLE)
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXFCR_FEIE);
+	else
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXFCR_FEIE);
+
+	//Check Direct Mode Error control setting.
+	if(DMA_Handle->DMA_Config.DMA_ItEnable.DMA_DMEIE == ENABLE)
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_DMEIE);
+	else
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_DMEIE);
 }
 
 /***************************************************************************************/
@@ -223,102 +358,452 @@ void DMA_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority)
 	*(NVIC_PR_BASEADDR + iprx) |= (IRQPriority << shift_amount);
 }
 
-void DMA1_Stream0_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
-{
-
-}
-
-void DMA1_Stream1_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
-{
-
-}
-
-void DMA1_Stream2_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
-{
-
-}
-
-void DMA1_Stream3_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
-{
-
-}
-void DMA1_Stream4_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
-{
-
-}
-
-void DMA1_Stream5_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
-{
-
-}
-
-void DMA1_Stream6_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
-{
-
-}
-
-void DMA1_Stream7_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
-{
-
-}
-
-void DMA2_Stream0_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint16_t *data)
+void DMA1_Stream0_IRQHandling(DMA_Handle_t *DMA_Handle)
 {
 	//Check for FIFO Error Interrupt.
-	if(((pDMAx->LISR &= (1 << DMA_LISR_FEIF0)) == SET) &&
-			((pDMAx->SxFCR[reqStream] &= (1 << DMA_SXFCR_FEIE)) == SET))
-		pDMAx->LIFCR |= (1 << DMA_LIFCR_CFEIF0);
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_FEIF0)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_0].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_0);
+
 	//Check for Direct Mode Error Interrupt.
-	if(((pDMAx->LISR &= (1 << DMA_LISR_DMEIF0)) == SET) &&
-			((pDMAx->SxCR[reqStream] &= (1 << DMA_SXCR_DMEIE)) == SET))
-		pDMAx->LIFCR |= (1 << DMA_LIFCR_CDMEIF0);
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_DMEIF0)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_0].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_0);
+
 	//Check for Transfer Error Interrupt.
-	if(((pDMAx->LISR &= (1 << DMA_LISR_TEIF0)) == SET) &&
-			((pDMAx->SxCR[reqStream] &= (1 << DMA_SXCR_TEIE)) == SET))
-		pDMAx->LIFCR |= (1 << DMA_LIFCR_CTEIF0);
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TEIF0)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_0].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_0);
+
 	//Check for Transfer Complete Interrupt.
-	if(((pDMAx->LISR &= (1 << DMA_LISR_TCIF0)) == SET) &&
-			((pDMAx->SxCR[reqStream] &= (1 << DMA_SXCR_TCIE)) == SET))
-		DMA_HandleTransCmptIt(pDMAx, data);
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TCIF0)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_0].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_0);
+
 	//Check for Half-Transter Interrupt.
-	if(((pDMAx->LISR &= (1 << DMA_LISR_HTIF0)) == SET) &&
-			((pDMAx->SxCR[reqStream] &= (1 << DMA_SXCR_HTIE)) == SET))
-		pDMAx->LIFCR |= (1 << DMA_LIFCR_CHTIF0);
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_HTIF0)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_0].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_0);
 }
 
-void DMA2_Stream1_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
+void DMA1_Stream1_IRQHandling(DMA_Handle_t *DMA_Handle)
 {
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_FEIF1)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_1].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_1);
 
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_DMEIF1)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_1].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_1);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TEIF1)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_1].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_1);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TCIF1)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_1].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_1);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_HTIF1)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_1].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_1);
 }
 
-void DMA2_Stream2_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
+void DMA1_Stream2_IRQHandling(DMA_Handle_t *DMA_Handle)
 {
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_FEIF2)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_2].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_2);
 
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_DMEIF2)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_2].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_2);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TEIF2)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_2].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_2);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TCIF2)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_2].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_2);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_HTIF2)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_2].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_2);
 }
 
-void DMA2_Stream3_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
+void DMA1_Stream3_IRQHandling(DMA_Handle_t *DMA_Handle)
 {
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_FEIF3)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_3].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_3);
 
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_DMEIF3)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_3].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_3);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TEIF3)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_3].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_3);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TCIF3)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_3].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_3);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_HTIF3)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_3].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_3);
 }
 
-void DMA2_Stream4_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
+void DMA1_Stream4_IRQHandling(DMA_Handle_t *DMA_Handle)
 {
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_FEIF4)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_4].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_4);
 
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_DMEIF4)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_4].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_4);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TEIF4)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_4].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_4);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TCIF4)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_4].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_4);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_HTIF4)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_4].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_4);
 }
 
-void DMA2_Stream5_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
+void DMA1_Stream5_IRQHandling(DMA_Handle_t *DMA_Handle)
 {
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_FEIF5)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_5].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_5);
 
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_DMEIF5)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_5].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_5);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TEIF5)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_5].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_5);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TCIF5)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_5].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_5);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_HTIF5)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_5].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_5);
 }
 
-void DMA2_Stream6_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
+void DMA1_Stream6_IRQHandling(DMA_Handle_t *DMA_Handle)
 {
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_FEIF6)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_6].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_6);
 
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_DMEIF6)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_6].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_6);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TEIF6)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_6].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_6);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TCIF6)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_6].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_6);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_HTIF6)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_6].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_6);
 }
 
-void DMA2_Stream7_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
+void DMA1_Stream7_IRQHandling(DMA_Handle_t *DMA_Handle)
 {
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_FEIF7)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_7].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_7);
 
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_DMEIF7)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_7].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_7);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TEIF7)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_7].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_7);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TCIF7)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_7].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_7);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_HTIF7)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_7].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_7);
+}
+
+void DMA2_Stream0_IRQHandling(DMA_Handle_t *DMA_Handle)
+{
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_FEIF0)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_0].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_0);
+
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_DMEIF0)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_0].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_0);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TEIF0)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_0].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_0);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TCIF0)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_0].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_0);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_HTIF0)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_0].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_0);
+}
+
+void DMA2_Stream1_IRQHandling(DMA_Handle_t *DMA_Handle)
+{
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_FEIF1)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_1].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_1);
+
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_DMEIF1)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_1].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_1);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TEIF1)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_1].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_1);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TCIF1)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_1].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_1);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_HTIF1)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_1].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_1);
+}
+
+void DMA2_Stream2_IRQHandling(DMA_Handle_t *DMA_Handle)
+{
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_FEIF2)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_2].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_2);
+
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_DMEIF2)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_2].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_2);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TEIF2)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_2].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_2);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TCIF2)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_2].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_2);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_HTIF2)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_2].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_2);
+}
+
+void DMA2_Stream3_IRQHandling(DMA_Handle_t *DMA_Handle)
+{
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_FEIF3)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_3].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_3);
+
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_DMEIF3)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_3].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_3);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TEIF3)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_3].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_3);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_TCIF3)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_3].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_3);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->LISR & (1 << DMA_LISR_HTIF3)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_3].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_3);
+}
+
+void DMA2_Stream4_IRQHandling(DMA_Handle_t *DMA_Handle)
+{
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_FEIF4)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_4].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_4);
+
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_DMEIF4)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_4].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_4);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TEIF4)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_4].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_4);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TCIF4)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_4].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_4);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_HTIF4)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_4].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_4);
+}
+
+void DMA2_Stream5_IRQHandling(DMA_Handle_t *DMA_Handle)
+{
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_FEIF5)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_5].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_5);
+
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_DMEIF5)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_5].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_5);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TEIF5)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_5].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_5);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TCIF5)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_5].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_5);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_HTIF5)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_5].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_5);
+}
+
+void DMA2_Stream6_IRQHandling(DMA_Handle_t *DMA_Handle)
+{
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_FEIF6)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_6].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_6);
+
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_DMEIF6)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_6].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_6);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TEIF6)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_6].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_6);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TCIF6)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_6].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_6);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_HTIF6)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_6].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_6);
+}
+
+void DMA2_Stream7_IRQHandling(DMA_Handle_t *DMA_Handle)
+{
+	//Check for FIFO Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_FEIF7)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_7].SxCR & (1 << DMA_SXFCR_FEIE))))
+		DMA_HandleFIFOErrIt(DMA_Handle, REQ_STREAM_7);
+
+	//Check for Direct Mode Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_DMEIF7)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_7].SxCR & (1 << DMA_SXCR_DMEIE))))
+		DMA_HandleDirectErrIt(DMA_Handle, REQ_STREAM_7);
+
+	//Check for Transfer Error Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TEIF7)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_7].SxCR & (1 << DMA_SXCR_TEIE))))
+		DMA_HandleTransErrIt(DMA_Handle, REQ_STREAM_7);
+
+	//Check for Transfer Complete Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_TCIF7)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_7].SxCR & (1 << DMA_SXCR_TCIE))))
+		DMA_HandleTransCmptIt(DMA_Handle, REQ_STREAM_7);
+
+	//Check for Half-Transter Interrupt.
+	if((DMA_Handle->pDMAx->HISR & (1 << DMA_HISR_HTIF7)) &&
+			((DMA_Handle->pDMAx->DMA_Sx[REQ_STREAM_7].SxCR & (1 << DMA_SXCR_HTIE))))
+		DMA_HandleHalfTransCmptIt(DMA_Handle, REQ_STREAM_7);
 }
 
 /***************************************************************************************/
@@ -326,75 +811,78 @@ void DMA2_Stream7_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream)
 
 /***************** Private Helper Function Definitions *********************************/
 
-static void DMA_ClearEN_Bit(DMA_RegDef_t *pDMAx, uint8_t reqStream)
-{
-	if(pDMAx->SxCR[reqStream] &= (1 << DMA_SXCR_EN) == SET)
-	{//If the EN bit is set, then it must be cleared and wait until all
-	 //transfers have finished.
-		pDMAx->SxCR[reqStream] &= ~(1 << DMA_SXCR_EN);
-		while(pDMAx->SxCR[reqStream] &= (1 << DMA_SXCR_EN) == SET);
-	}
-}
-
 static void DMA_ConfigPeripheralAddress(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint32_t periAddress)
 {
-	pDMAx->SxPAR[reqStream] = periAddress;
+	pDMAx->DMA_Sx[reqStream].SxPAR = periAddress;
 }
 
 static void DMA_ConfigMemoryAddresses(DMA_Handle_t *DMA_Handle, uint8_t reqStream, uint32_t memAddress)
 {
 	if(DMA_Handle->DMA_Config.DMA_TransactionType == DMA_DOUBLE_BUFFER_TRANSACTION)
 	{//Double Buffer Transaction will be used.
-		DMA_Handle->pDMAx->SxM0AR[reqStream] = memAddress;
-		DMA_Handle->pDMAx->SxM1AR[reqStream] = memAddress;
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxM0AR = memAddress;
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxM1AR = memAddress;
 	}else//Regular Type Transaction will be used.
-		DMA_Handle->pDMAx->SxM0AR[reqStream] = memAddress;
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxM0AR = memAddress;
 }
 
 static void DMA_ConfigItemsToTransfer(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t itemsToTransfer)
 {
-	pDMAx->SxNDTR[reqStream] = itemsToTransfer;
+	pDMAx->DMA_Sx[reqStream].SxNDTR = itemsToTransfer;
 }
 
 static void DMA_ConfigChannel(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t channel)
 {
-	pDMAx->SxCR[reqStream] |= (channel << DMA_SXCR_CHSEL);
+	if(channel == ADC_IN0)
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(channel << DMA_SXCR_CHSEL);
+	else
+		pDMAx->DMA_Sx[reqStream].SxCR |= (channel << DMA_SXCR_CHSEL);
 }
 
 static void DMA_ConfigStreamPriority(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t priority)
 {
-	pDMAx->SxCR[reqStream] |= (priority << DMA_SXCR_PL);
+	pDMAx->DMA_Sx[reqStream].SxCR |= (priority << DMA_SXCR_PL);
 }
 
 static void DMA_ConfigFIFO(DMA_Handle_t *DMA_Handle, uint8_t reqStream, uint8_t EnOrDi)
 {
 	if(EnOrDi == ENABLE)
 	{//FIFO Mode is used.
-		DMA_Handle->pDMAx->SxFCR[reqStream] |= (1 << DMA_SXFCR_DMDIS);
-		DMA_Handle->pDMAx->SxFCR[reqStream] |= (DMA_Handle->DMA_Config.DMA_FIFO_Threshold << DMA_SXFCR_FTH);
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxFCR |= (1 << DMA_SXFCR_DMDIS);
+		if(DMA_Handle->DMA_Config.DMA_FIFO_Threshold == DMA_1_4_FULL_FIFO)
+			DMA_Handle->pDMAx->DMA_Sx[reqStream].SxFCR &= ~(1 << DMA_SXFCR_FTH);
+
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxFCR |= (DMA_Handle->DMA_Config.DMA_FIFO_Threshold << DMA_SXFCR_FTH);
 	}else//Direct Mode is used.
-		DMA_Handle->pDMAx->SxFCR[reqStream] &= ~(1 << DMA_SXFCR_DMDIS);
+		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxFCR &= ~(1 << DMA_SXFCR_DMDIS);
 }
 
 static void DMA_ConfigTransDirection(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t dir)
 {
-	pDMAx->SxCR[reqStream] |= (dir << DMA_SXCR_DIR);
+	if(dir == DMA_PERIPHERAL_TO_MEMORY)
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_DIR);
+	else
+		pDMAx->DMA_Sx[reqStream].SxCR |= (dir << DMA_SXCR_DIR);
 }
 
 static void DMA_ConfigPtrIncrement(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t incMode)
 {
-	if(incMode == DMA_MEM_INC_MODE_ENABLE)//Ptr increment for memory only.
-		pDMAx->SxCR[reqStream] |= (1 << DMA_SXCR_MINC);
-	else if(incMode == DMA_PER_INC_MODE_ENABLE)//Ptr increment for peripheral only.
-		pDMAx->SxCR[reqStream] |= (1 << DMA_SXCR_PINC);
-	else if(incMode == DMA_MEM_PERI_INC_MODE_EN)
+	if(incMode == DMA_MEM_INC_MODE_ENABLE)
+	{//Ptr increment for memory only.
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_PINC);
+		pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_MINC);
+	}else if(incMode == DMA_PER_INC_MODE_ENABLE)
+	{//Ptr increment for peripheral only.
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_MINC);
+		pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_PINC);
+	}else if(incMode == DMA_MEM_PERI_INC_MODE_EN)
 	{//Ptr increment for both.
-		pDMAx->SxCR[reqStream] |= (1 << DMA_SXCR_PINC);
-		pDMAx->SxCR[reqStream] |= (1 << DMA_SXCR_MINC);
+		pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_PINC);
+		pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_MINC);
 	}else
 	{//Fixed mode is used.
-		pDMAx->SxCR[reqStream] &= ~(1 << DMA_SXCR_PINC);
-		pDMAx->SxCR[reqStream] &= ~(1 << DMA_SXCR_MINC);
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_PINC);
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_MINC);
 	}
 }
 
@@ -402,13 +890,13 @@ static void DMA_ConfigBurstTransType(DMA_RegDef_t *pDMAx, uint8_t reqStream, uin
 {
 	if((memType <= DMA_INCR16 && memType >= DMA_INCR4) &&
 			(periType <= DMA_INCR16 && periType >= DMA_INCR4))
-	{
-		pDMAx->SxCR[reqStream] |= (memType << DMA_SXCR_MBURST);
-		pDMAx->SxCR[reqStream] |= (periType << DMA_SXCR_PBURST);
-	}else
-	{
-		pDMAx->SxCR[reqStream] &= ~(memType << DMA_SXCR_MBURST);
-		pDMAx->SxCR[reqStream] &= ~(periType << DMA_SXCR_PBURST);
+	{//Burst Transfer Configuration.
+		pDMAx->DMA_Sx[reqStream].SxCR |= (memType << DMA_SXCR_MBURST);
+		pDMAx->DMA_Sx[reqStream].SxCR |= (periType << DMA_SXCR_PBURST);
+	}else if(memType == DMA_SINGLE_TRANSFER && periType == DMA_SINGLE_TRANSFER)
+	{//Single Transfer Configuration.
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(memType << DMA_SXCR_MBURST);
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(periType << DMA_SXCR_PBURST);
 	}
 }
 
@@ -417,60 +905,118 @@ static void DMA_ConfigDataWidths(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t
 	if((msize == DMA_WORD || msize == DMA_HALF_WORD) &&
 			(psize == DMA_WORD || psize == DMA_HALF_WORD))
 	{
-		pDMAx->SxCR[reqStream] |= (msize << DMA_SXCR_MSIZE);
-		pDMAx->SxCR[reqStream] |= (psize << DMA_SXCR_PSIZE);
+		pDMAx->DMA_Sx[reqStream].SxCR |= (msize << DMA_SXCR_MSIZE);
+		pDMAx->DMA_Sx[reqStream].SxCR |= (psize << DMA_SXCR_PSIZE);
 	}else
-	{
-		pDMAx->SxCR[reqStream] &= ~(msize << DMA_SXCR_MSIZE);
-		pDMAx->SxCR[reqStream] &= ~(psize << DMA_SXCR_PSIZE);
+	{	//Psize, Msize will be a BYTE.
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(msize << DMA_SXCR_MSIZE);
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(psize << DMA_SXCR_PSIZE);
 	}
 }
 
 static void DMA_ConfigCircularMode(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t EnOrDi)
 {
 	if(EnOrDi == ENABLE)//Enable Circular Mode
-		pDMAx->SxCR[reqStream] |= (1 << DMA_SXCR_CIRC);
+		pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_CIRC);
 	else//Disable Circular Mode
-		pDMAx->SxCR[reqStream] &= ~(1 << DMA_SXCR_CIRC);
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_CIRC);
 }
 
 static void DMA_ConfigDoubleBuffMode(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t EnOrDi)
 {
 	if(EnOrDi == ENABLE)//Enable Double Buffer Mode
-		pDMAx->SxCR[reqStream] |= (1 << DMA_SXCR_DBM);
+		pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_DBM);
 	else//Disable Double Buffer Mode
-		pDMAx->SxCR[reqStream] &= ~(1 << DMA_SXCR_DBM);
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_DBM);
 }
 
-static void DMA_ConfigInterrupts(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t EnOrDi)
+
+
+static void DMA_HandleHalfTransCmptIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 {
-	if(EnOrDi == ENABLE)
+	switch(reqStream)
 	{
-		pDMAx->SxCR[reqStream] |= (1 << DMA_SXCR_DMEIE);
-		pDMAx->SxCR[reqStream] |= (1 << DMA_SXCR_TEIE);
-		pDMAx->SxCR[reqStream] |= (1 << DMA_SXCR_HTIE);
-		pDMAx->SxCR[reqStream] |= (1 << DMA_SXCR_TCIE);
-		pDMAx->SxCR[reqStream] |= (1 << DMA_SXFCR_FEIE);
-	}else
-	{
-		pDMAx->SxCR[reqStream] &= ~(1 << DMA_SXCR_DMEIE);
-		pDMAx->SxCR[reqStream] &= ~(1 << DMA_SXCR_TEIE);
-		pDMAx->SxCR[reqStream] &= ~(1 << DMA_SXCR_HTIE);
-		pDMAx->SxCR[reqStream] &= ~(1 << DMA_SXCR_TCIE);
-		pDMAx->SxCR[reqStream] &= ~(1 << DMA_SXFCR_FEIE);
+		case REQ_STREAM_0: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CHTIF0); break;
+		case REQ_STREAM_1: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CHTIF1); break;
+		case REQ_STREAM_2: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CHTIF2); break;
+		case REQ_STREAM_3: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CHTIF3); break;
+		case REQ_STREAM_4: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CHTIF4); break;
+		case REQ_STREAM_5: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CHTIF5); break;
+		case REQ_STREAM_6: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CHTIF6); break;
+		case REQ_STREAM_7: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CHTIF7); break;
 	}
+	DMA_Handle->DMA_status = DMA_HALF_TRANSFER_COMPLETE;
+	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
 }
 
-static void DMA_ActivateStream(DMA_RegDef_t *pDMAx, uint8_t reqStream)
+static void DMA_HandleTransCmptIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 {
-	pDMAx->SxCR[reqStream] |= (1 << DMA_SXCR_EN);
+	switch(reqStream)
+	{
+		case REQ_STREAM_0: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CTCIF0); break;
+		case REQ_STREAM_1: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CTCIF1); break;
+		case REQ_STREAM_2: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CTCIF2); break;
+		case REQ_STREAM_3: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CTCIF3); break;
+		case REQ_STREAM_4: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CTCIF4); break;
+		case REQ_STREAM_5: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CTCIF5); break;
+		case REQ_STREAM_6: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CTCIF6); break;
+		case REQ_STREAM_7: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CTCIF7); break;
+	}
+	DMA_Handle->transCompleted += 1;
+	DMA_Handle->DMA_status = DMA_TRANSFER_COMPLETE;
+	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
 }
 
-static void DMA_HandleTransCmptIt(DMA_RegDef_t *pDMAx, uint16_t *data)
+static void DMA_HandleTransErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 {
-
-	pDMAx->LIFCR |= (1 << DMA_LIFCR_CTCIF0);
-	data++;
+	switch(reqStream)
+	{
+		case REQ_STREAM_0: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CTEIF0); break;
+		case REQ_STREAM_1: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CTEIF1); break;
+		case REQ_STREAM_2: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CTEIF2); break;
+		case REQ_STREAM_3: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CTEIF3); break;
+		case REQ_STREAM_4: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CTEIF4); break;
+		case REQ_STREAM_5: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CTEIF5); break;
+		case REQ_STREAM_6: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CTEIF6); break;
+		case REQ_STREAM_7: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CTEIF7); break;
+	}
+	DMA_Handle->DMA_status = DMA_TRANSFER_ERROR;
+	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
 }
+
+static void DMA_HandleFIFOErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
+{
+	switch(reqStream)
+	{
+		case REQ_STREAM_0: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CFEIF0); break;
+		case REQ_STREAM_1: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CFEIF1); break;
+		case REQ_STREAM_2: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CFEIF2); break;
+		case REQ_STREAM_3: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CFEIF3); break;
+		case REQ_STREAM_4: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CFEIF4); break;
+		case REQ_STREAM_5: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CFEIF5); break;
+		case REQ_STREAM_6: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CFEIF6); break;
+		case REQ_STREAM_7: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CFEIF7); break;
+	}
+	DMA_Handle->DMA_status = DMA_FIFO_ERROR;
+	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
+}
+
+static void DMA_HandleDirectErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
+{
+	switch(reqStream)
+	{
+		case REQ_STREAM_0: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CDMEIF0); break;
+		case REQ_STREAM_1: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CDMEIF1); break;
+		case REQ_STREAM_2: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CDMEIF2); break;
+		case REQ_STREAM_3: DMA_Handle->pDMAx->LIFCR |= (1 << DMA_LIFCR_CDMEIF3); break;
+		case REQ_STREAM_4: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CDMEIF4); break;
+		case REQ_STREAM_5: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CDMEIF5); break;
+		case REQ_STREAM_6: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CDMEIF6); break;
+		case REQ_STREAM_7: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CDMEIF7); break;
+	}
+	DMA_Handle->DMA_status = DMA_DIRECT_ERROR;
+	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
+}
+
 
 /***************************************************************************************/

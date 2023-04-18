@@ -81,7 +81,7 @@ void ADC_PeriClockControl(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
  * 				  selected group, and the order of the channels.
  *
  * @param[ADC_RegDef_t*]	- Base address of the ADC register.
- * @param[uint8_t]			- Which conversion group to be used.
+ * @param[uint8_t]			- Conversion group to be used.
  * 							  ex. (REGULAR_GROUP, INJECTED_GROUP).
  * @param[uint8_t]			- Number of conversions for the selected group.
  * 							  ex. (_01_CONVERSIONS, _02_CONVERSIONS, ... _16_CONVERSIONS).
@@ -190,28 +190,77 @@ void ADC_ChannelSelection(ADC_RegDef_t *pADCx, uint8_t convGroup, uint8_t conver
  */
 void ADC_ConfigSampRate(ADC_RegDef_t *pADCx, uint8_t channel, uint8_t cycles)
 {
-	switch(channel)
+	if(cycles == ADC_003_CYCLES)
 	{
-		case ADC_IN0 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP0);  break;
-		case ADC_IN1 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP1);  break;
-		case ADC_IN2 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP2);  break;
-		case ADC_IN3 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP3);  break;
-		case ADC_IN4 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP4);  break;
-		case ADC_IN5 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP5);  break;
-		case ADC_IN6 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP6);  break;
-		case ADC_IN7 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP7);  break;
-		case ADC_IN8 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP8);  break;
-		case ADC_IN9 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP9);  break;
-		case ADC_IN10: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP10); break;
-		case ADC_IN11: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP11); break;
-		case ADC_IN12: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP12); break;
-		case ADC_IN13: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP13); break;
-		case ADC_IN14: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP14); break;
-		case ADC_IN15: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP15); break;
-		case ADC_IN16: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP16); break;
-		case ADC_IN17: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP17); break;
-		case ADC_IN18: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP18); break;
+		switch(channel)
+		{
+			case ADC_IN0 : pADCx->SMPR2 &= ~(1 << ADC_SMPR2_SMP0);  break;
+			case ADC_IN1 : pADCx->SMPR2 &= ~(1 << ADC_SMPR2_SMP1);  break;
+			case ADC_IN2 : pADCx->SMPR2 &= ~(1 << ADC_SMPR2_SMP2);  break;
+			case ADC_IN3 : pADCx->SMPR2 &= ~(1 << ADC_SMPR2_SMP3);  break;
+			case ADC_IN4 : pADCx->SMPR2 &= ~(1 << ADC_SMPR2_SMP4);  break;
+			case ADC_IN5 : pADCx->SMPR2 &= ~(1 << ADC_SMPR2_SMP5);  break;
+			case ADC_IN6 : pADCx->SMPR2 &= ~(1 << ADC_SMPR2_SMP6);  break;
+			case ADC_IN7 : pADCx->SMPR2 &= ~(1 << ADC_SMPR2_SMP7);  break;
+			case ADC_IN8 : pADCx->SMPR2 &= ~(1 << ADC_SMPR2_SMP8);  break;
+			case ADC_IN9 : pADCx->SMPR2 &= ~(1 << ADC_SMPR2_SMP9);  break;
+			case ADC_IN10: pADCx->SMPR1 &= ~(1 << ADC_SMPR1_SMP10); break;
+			case ADC_IN11: pADCx->SMPR1 &= ~(1 << ADC_SMPR1_SMP11); break;
+			case ADC_IN12: pADCx->SMPR1 &= ~(1 << ADC_SMPR1_SMP12); break;
+			case ADC_IN13: pADCx->SMPR1 &= ~(1 << ADC_SMPR1_SMP13); break;
+			case ADC_IN14: pADCx->SMPR1 &= ~(1 << ADC_SMPR1_SMP14); break;
+			case ADC_IN15: pADCx->SMPR1 &= ~(1 << ADC_SMPR1_SMP15); break;
+			case ADC_IN16: pADCx->SMPR1 &= ~(1 << ADC_SMPR1_SMP16); break;
+			case ADC_IN17: pADCx->SMPR1 &= ~(1 << ADC_SMPR1_SMP17); break;
+			case ADC_IN18: pADCx->SMPR1 &= ~(1 << ADC_SMPR1_SMP18); break;
+		}
 	}
+	else
+	{
+		switch(channel)
+		{
+			case ADC_IN0 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP0);  break;
+			case ADC_IN1 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP1);  break;
+			case ADC_IN2 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP2);  break;
+			case ADC_IN3 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP3);  break;
+			case ADC_IN4 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP4);  break;
+			case ADC_IN5 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP5);  break;
+			case ADC_IN6 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP6);  break;
+			case ADC_IN7 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP7);  break;
+			case ADC_IN8 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP8);  break;
+			case ADC_IN9 : pADCx->SMPR2 |= (cycles << ADC_SMPR2_SMP9);  break;
+			case ADC_IN10: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP10); break;
+			case ADC_IN11: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP11); break;
+			case ADC_IN12: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP12); break;
+			case ADC_IN13: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP13); break;
+			case ADC_IN14: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP14); break;
+			case ADC_IN15: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP15); break;
+			case ADC_IN16: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP16); break;
+			case ADC_IN17: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP17); break;
+			case ADC_IN18: pADCx->SMPR1 |= (cycles << ADC_SMPR1_SMP18); break;
+		}
+	}
+}
+
+/*
+ * @fn			- ADC_SelectEOCFlagTrigger
+ *
+ * @brief		- This function configures the End of Conversion
+ * 				  Selection bit in the CR2 register.
+ *
+ * @param[ADC_Handle_t*]	- Base address of the ADC Handle.
+ *
+ * @return		- None.
+ *
+ * @note		- Settings for this is provided in the config
+ * 				  structure within the hanle structure.
+ */
+void ADC_SelectEOCFlagTrigger(ADC_Handle_t *ADC_Handle)
+{
+	if(ADC_Handle->ADC_Config.ADC_EOCSelect == ADC_END_OF_EACH)
+		ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_EOCS);
+	else
+		ADC_Handle->pADCx->CR2 &= ~(1 << ADC_CR2_EOCS);
 }
 
 /*
@@ -231,33 +280,15 @@ void ADC_ConfigSampRate(ADC_RegDef_t *pADCx, uint8_t channel, uint8_t cycles)
  */
 void ADC_StartSingleConv(ADC_Handle_t *ADC_Handle, uint8_t group)
 {
-	if(ADC_Handle->ADC_Config.ADC_ItEnable == INTERRUPT_DISABLE)
-	{//Interrupts NOT enabled.
-		ADC_Handle->pADCx->CR2 &= ~(1 << ADC_CR2_CONT);
-		if(group == ADC_REGULAR_GROUP)
-		{//Single conversion of a channel from the regular group.
-			ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
-			ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_STRT);
-		}else
-		{//Single conversion of a channel from the injection group.
-			ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_JSWSTART);
-			ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_JSTRT);
-		}
+	ADC_Handle->pADCx->CR2 &= ~(1 << ADC_CR2_CONT);
+	if(group == ADC_REGULAR_GROUP)
+	{//Single conversion of a channel from the regular group.
+		ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
+		ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_STRT);
 	}else
-	{//Interrupts enabled.
-		ADC_Handle->pADCx->CR2 &= ~(1 << ADC_CR2_CONT);
-		if(group == ADC_REGULAR_GROUP)
-		{//Single conversion of a channel from the regular group.
-			ADC_Handle->pADCx->CR2 &= ~(1 << ADC_CR2_EOCS);
-			ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
-			ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_STRT);
-			ADC_Handle->ADC_It_Flag = ADC_EOC_FLAG_SET;
-		}else
-		{//Single conversion of a channel from the injection group.
-			ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_JSWSTART);
-			ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_JSTRT);
-			ADC_Handle->ADC_It_Flag = ADC_JEOC_FLAG_SET;
-		}
+	{//Single conversion of a channel from the injection group.
+		ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_JSWSTART);
+		ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_JSTRT);
 	}
 }
 
@@ -279,18 +310,13 @@ void ADC_StartSingleConv(ADC_Handle_t *ADC_Handle, uint8_t group)
  */
 void ADC_StartContConv(ADC_Handle_t *ADC_Handle)
 {
-	if(ADC_Handle->ADC_Config.ADC_ItEnable == ADC_INTERRUPT_DISABLE)
-	{//No interrupts enabled.
-		ADC_Handle->pADCx->CR2 &= ~(1 << ADC_CR2_EOCS);
-		ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_CONT);
-		ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
-	}else
-	{//Interrupts enabled.
-		ADC_Handle->pADCx->CR2 &= ~(1 << ADC_CR2_EOCS);
-		ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_CONT);
-		ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
+	if(ADC_Handle->ADC_Config.ADC_ConvMode == ADC_SCAN_CONV_MODE)
+	{	//Scan Mode will be used.
+		ADC_Handle->pADCx->CR1 |= (1 << ADC_CR1_SCAN);
 	}
 
+	ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_CONT);
+	ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
 }
 
 /*
@@ -324,7 +350,7 @@ uint16_t ADC_ReadRegDR(ADC_RegDef_t *pADCx)
  */
 uint16_t ADC_ReadInjDR(ADC_RegDef_t *pADCx)
 {
-		return (uint16_t)pADCx->JDR1;
+	return (uint16_t)pADCx->JDR1;
 }
 
 /*
@@ -344,6 +370,11 @@ void ADC_SelectWatchDogChannel(ADC_RegDef_t *pADCx, uint8_t channel)
 {
 	pADCx->CR1 |= (channel << ADC_CR1_AWDCH);
 }
+
+/***************************************************************************************/
+
+
+/***************** ADCx IRQ Handling ***************************************************/
 
 /*
  * @fn			- ADC_IRQInterruptConfig
@@ -408,46 +439,30 @@ void ADC_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority)
  * @note		- The interrupt bits(OVRIE, EOCIE, JEOCIE, AWDIE) must
  * 				  be set in order for an interrupt to be triggered.
  */
-void ADC_IRQHandling(ADC_Handle_t *ADC_Handle)
+void ADC_IRQHandling(ADC_Handle_t *ADC_Handle, uint16_t *data)
 {
-	if(ADC_Handle->ADC_It_Flag == ADC_EOC_FLAG_SET)
+	if(((ADC_Handle->pADCx->SR >> ADC_SR_EOC) & 0x1) == SET)
 	{//End of Conversion flag.
 		ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_EOC);
-		if(ADC_Handle->ADC_Config.ADC_DMAEnable == ADC_DMA_ENABLE)
-		{//The DMA for ADC is enabled.
-			//TODO: Implement
-		}
-		ADC_Handle->ADC_It_Flag = ADC_NO_FLAG_SET;
+		ADC_Handle->ADC_status = ADC_END_OF_CONVERSION_REG;
 	}
 
-	if(ADC_Handle->ADC_It_Flag == ADC_JEOC_FLAG_SET)
+	if(ADC_Handle->pADCx->SR & (1 << ADC_SR_JEOC))
 	{//End of Injected Conversion flag.
 		ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_JEOC);
-		if(ADC_Handle->ADC_Config.ADC_DMAEnable == ADC_DMA_ENABLE)
-		{//The DMA for ADC is enabled.
-			//TODO: Implement
-		}
-
-		ADC_Handle->ADC_It_Flag = ADC_NO_FLAG_SET;
 	}
 
-	if(ADC_Handle->ADC_It_Flag == ADC_AWD_FLAG_SET)
+	if(ADC_Handle->pADCx->SR & (1 << ADC_SR_AWD))
 	{//Analog Watchdog flag.
-		if(ADC_Handle->ADC_Config.ADC_DMAEnable == ADC_DMA_ENABLE)
-		{//The DMA for ADC is enabled.
-			//TODO: Implement
-		}
-		ADC_Handle->ADC_It_Flag = ADC_NO_FLAG_SET;
+
 	}
 
-	if(ADC_Handle->ADC_It_Flag == ADC_OVR_FLAG_SET)
+	if(ADC_Handle->pADCx->SR & (1 << ADC_SR_OVR))
 	{//Overrun flag.
-		if(ADC_Handle->ADC_Config.ADC_DMAEnable == ADC_DMA_ENABLE)
-		{//The DMA for ADC is enabled.
-			//TODO: Implement
-		}
-		ADC_Handle->ADC_It_Flag = ADC_NO_FLAG_SET;
+
 	}
+
+	ADC_ApplicationEventCallback(ADC_Handle, ADC_Handle->ADC_status);
 }
 
 /***************************************************************************************/
@@ -533,9 +548,11 @@ static void ADC_ConfigDMA(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
 	if(EnOrDi == ADC_DMA_ENABLE)
 	{
 		pADCx->CR2 |= (1 << ADC_CR2_DMA);
+		pADCx->CR2 |= (1 << ADC_CR2_DDS);
 	}else
 	{
 		pADCx->CR2 &= ~(1 << ADC_CR2_DMA);
+		pADCx->CR2 &= ~(1 << ADC_CR2_DDS);
 	}
 }
 

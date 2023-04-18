@@ -5,6 +5,16 @@
 
 /***************** DMA Structure Definitions *******************************************/
 
+//DMA Interrupts Configuration Structure Definition.
+typedef struct
+{
+	uint8_t DMA_HTIE;			/*Half-transfer				[ENABLE or DISABLE]*/
+	uint8_t DMA_TCIE;			/*Transfer complete			[ENABLE or DISABLE]*/
+	uint8_t DMA_TEIE;			/*Transfer error			[ENABLE or DISABLE]*/
+	uint8_t DMA_FEIE;			/*FIFO overrun/underrun		[ENABLE or DISABLE]*/
+	uint8_t DMA_DMEIE;			/*Direct mode error			[ENABLE or DISABLE]*/
+}DMA_IT_Config_t;
+
 //DMA Configuration Structure Definition.
 typedef struct
 {
@@ -12,15 +22,15 @@ typedef struct
 	uint8_t	DMA_ArbPriority;			//@ArbiterPriority
 	uint8_t	DMA_TransactionType;		//@TransactionTypes
 	uint8_t	DMA_PtrInc;					//@PointerIncrementation
-	uint8_t DMA_MemoryDataWidth;		//@DataWidth
-	uint8_t DMA_PeripheralDataWidth;	//@DataWidth
+	uint8_t DMA_SourceDataWidth;		//@DataWidth
+	uint8_t DMA_DestinationDataWidth;	//@DataWidth
 	uint8_t DMA_FIFO_Mode;				//@FIFO_Mode
 	uint8_t DMA_FIFO_Threshold;			//@FIFO_ThresholdLevel
 	uint8_t DMA_MemBurstTransfer;		//@BurstTransferConfiguration
 	uint8_t DMA_PeriBurstTransfer;		//@BurstTransferConfiguration
 	uint8_t	DMA_CircularMode;			//@CircularMode
 	uint16_t DMA_SxNDTR;				//SxNDTR_Value
-	uint8_t DMA_ItEnable;				//@InterruptsEnable
+	DMA_IT_Config_t DMA_ItEnable;		//@InterruptsEnable
 }DMA_Config_t;
 
 //DMA Handle Structure Definition.
@@ -29,6 +39,7 @@ typedef struct
 	DMA_RegDef_t *pDMAx;
 	DMA_Config_t DMA_Config;
 	uint32_t transCompleted;		/*!<Number of completed transactions.>*/
+	uint8_t DMA_status;
 }DMA_Handle_t;
 
 /***************************************************************************************/
@@ -81,6 +92,14 @@ typedef struct
 #define DMA_CIRCULAR_MODE_DISABLE			0
 #define DMA_CIRCULAR_MODE_ENABLE			1
 
+//DMA Status
+#define DMA_OK								0
+#define DMA_HALF_TRANSFER_COMPLETE			1
+#define DMA_TRANSFER_COMPLETE				2
+#define DMA_TRANSFER_ERROR					3
+#define DMA_FIFO_ERROR						4
+#define DMA_DIRECT_ERROR					5
+
 
 //Request Stream Channels
 #define REQ_STR_CH_0		0
@@ -120,9 +139,13 @@ void DMA_ConfigStream(DMA_Handle_t *DMA_Handle, uint8_t reqStream, uint32_t peri
 		uint32_t memAddress, uint8_t channel);
 void DMA_findMburstBeatPsizeMsize(DMA_RegDef_t *pDMAx, uint8_t reqStream,
 		uint8_t *MburstBeat, uint8_t *psize, uint8_t *msize);
+void DMA_ActivateStream(DMA_RegDef_t *pDMAx, uint8_t reqStream);
+void DMA_ClearEN_Bit(DMA_RegDef_t *pDMAx, uint8_t reqStream);
+void DMA_ConfigInterrupts(DMA_Handle_t *DMA_Handle, uint8_t reqStream);
 
 void DMA_IRQInterruptConfig(uint8_t IRQNumber, uint8_t EnOrDi);
 void DMA_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority);
+
 void DMA1_Stream0_IRQHandler(void);
 void DMA1_Stream1_IRQHandler(void);
 void DMA1_Stream2_IRQHandler(void);
@@ -140,6 +163,23 @@ void DMA2_Stream5_IRQHandler(void);
 void DMA2_Stream6_IRQHandler(void);
 void DMA2_Stream7_IRQHandler(void);
 
-void DMA2_Stream0_IRQHandling(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint16_t *data);
+void DMA1_Stream0_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA1_Stream1_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA1_Stream2_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA1_Stream3_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA1_Stream4_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA1_Stream5_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA1_Stream6_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA1_Stream7_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA2_Stream0_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA2_Stream1_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA2_Stream2_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA2_Stream3_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA2_Stream4_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA2_Stream5_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA2_Stream6_IRQHandling(DMA_Handle_t *DMA_Handle);
+void DMA2_Stream7_IRQHandling(DMA_Handle_t *DMA_Handle);
+
+void DMA_ApplicationEventCallback(DMA_Handle_t *pDMAHandle, uint8_t AppEv, uint8_t reqStream);
 
 #endif /* INC_STM32F407XX_DMA_DRIVER_H_ */

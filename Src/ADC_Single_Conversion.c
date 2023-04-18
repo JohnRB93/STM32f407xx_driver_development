@@ -39,14 +39,16 @@ int main(void)
 
 	uint8_t channel = ADC_IN6;
 
-
 	while(1)
 	{
-		ADC_ChannelSelection(ADC_IN.pADCx, RG, ADC_01_CONVERSIONS, &channel, 1);
 #ifdef RG
-		ADC_StartSingleConv(ADC_IN.pADCx, RG);
+		ADC_ChannelSelection(ADC_IN.pADCx, RG, ADC_01_CONVERSIONS, &channel, 1);
+		ADC_StartSingleConv(&ADC_IN, RG);
+		data = (((255.0/4094)*ADC_ReadRegDR(ADC_IN.pADCx))-(255.0/4094));
 #else
-		ADC_StartSingleConv(ADC_IN.pADCx, IG);
+		ADC_ChannelSelection(ADC_IN.pADCx, IG, ADC_01_CONVERSIONS, &channel, 1);
+		ADC_StartSingleConv(&ADC_IN, IG);
+		data = (((255.0/4094)*ADC_ReadInjDR(ADC_IN.pADCx))-(255.0/4094));
 #endif
 		data = (((255.0/4094)*ADC_ReadRegDR(ADC_IN.pADCx))-(255.0/4094));
 		printf("Data = %d\n", data);

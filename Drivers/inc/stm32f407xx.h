@@ -242,22 +242,27 @@ typedef struct
 
 typedef struct
 {
+	__vo uint32_t SxCR;			/*DMA stream x configuration register
+									Address offset: 0x10 + 0x18 × stream number*/
+	__vo uint32_t SxNDTR;		/*DMA stream x number of data register
+									Address offset: 0x14 + 0x18 × stream number*/
+	__vo uint32_t SxPAR;		/*DMA stream x peripheral address register
+									Address offset: 0x18 + 0x18 × stream number*/
+	__vo uint32_t SxM0AR;		/*DMA stream x memory 0 address register
+									Address offset: 0x1C + 0x18 × stream number*/
+	__vo uint32_t SxM1AR;		/*DMA stream x memory 1 address register
+									Address offset: 0x20 + 0x18 × stream number*/
+	__vo uint32_t SxFCR;		/*DMA stream x FIFO control register
+									Address offset: 0x24 + 0x24 × stream number*/
+}DMA_StreamX_RegDef_t;
+
+typedef struct
+{
 	__vo uint32_t LISR;			/*DMA low interrupt status register				Address offset: 0x00*/
 	__vo uint32_t HISR;			/*DMA high interrupt status register			Address offset: 0x04*/
 	__vo uint32_t LIFCR;		/*DMA low interrupt flag clear register			Address offset: 0x08*/
 	__vo uint32_t HIFCR;		/*DMA high interrupt flag clear register		Address offset: 0x0C*/
-	__vo uint32_t SxCR[8];		/*DMA stream x configuration register
-									Address offset: 0x10 + 0x18 × stream number*/
-	__vo uint32_t SxNDTR[8];	/*DMA stream x number of data register
-									Address offset: 0x14 + 0x18 × stream number*/
-	__vo uint32_t SxPAR[8];		/*DMA stream x peripheral address register
-									Address offset: 0x18 + 0x18 × stream number*/
-	__vo uint32_t SxM0AR[8];	/*DMA stream x memory 0 address register
-									Address offset: 0x1C + 0x18 × stream number*/
-	__vo uint32_t SxM1AR[8];	/*DMA stream x memory 1 address register
-									Address offset: 0x20 + 0x18 × stream number*/
-	__vo uint32_t SxFCR[8];		/*DMA stream x FIFO control register
-									Address offset: 0x24 + 0x24 × stream number*/
+	__vo DMA_StreamX_RegDef_t DMA_Sx[8];	/*DMA Stream Number X				Address offset: 0x10*/
 }DMA_RegDef_t;
 
 
