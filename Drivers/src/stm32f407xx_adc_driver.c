@@ -469,6 +469,7 @@ void ADC_IRQHandling(ADC_Handle_t *ADC_Handle)
 
 
 /***************** Private Helper Function Definitions *********************************/
+//TODO: Add better documentation to private function definitions.
 
 //Turns the ADC on or off.
 static void ADC_ConverterSwitch(ADC_RegDef_t *pADCx, uint8_t EnOrDi)

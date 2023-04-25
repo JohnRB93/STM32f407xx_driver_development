@@ -810,6 +810,7 @@ void DMA2_Stream7_IRQHandling(DMA_Handle_t *DMA_Handle)
 
 
 /***************** Private Helper Function Definitions *********************************/
+//TODO: Add documentation to private function definitions.
 
 static void DMA_ConfigPeripheralAddress(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint32_t periAddress)
 {

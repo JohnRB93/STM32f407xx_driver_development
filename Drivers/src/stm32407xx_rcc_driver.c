@@ -4,6 +4,52 @@ uint16_t AHB_PreScaler[8] = {2, 4, 8, 16, 64, 128, 256, 512};
 uint8_t APBx_PreScaler[4] = {2, 4, 8, 16};
 
 
+
+/***************** Private Helper Function Headers *************************************/
+
+static void RCC_ConfigSysClk(RCC_RegDef_t *pRCC, uint8_t sysClk);
+static void RCC_ConfigAHB_Prescaler(RCC_RegDef_t *pRCC, uint8_t ahbPrescaler);
+static void RCC_ConfigAPB_LSpPrescaler(RCC_RegDef_t *pRCC, uint8_t apbLPrescaler);
+static void RCC_ConfigAPB_HSpPrescaler(RCC_RegDef_t *pRCC, uint8_t apbHPrescaler);
+static void RCC_ConfigHSE_DivRTC(RCC_RegDef_t *pRCC, uint8_t hseDiv);
+static void RCC_ConfigMC_ClkOutput1(RCC_RegDef_t *pRCC, uint8_t mcClkOut);
+static void RCC_ConfigMC_ClkOutput2(RCC_RegDef_t *pRCC, uint8_t mcClkOut);
+static void RCC_ConfigI2S_ClkSelection(RCC_RegDef_t *pRCC, uint8_t i2sClkSel);
+static void RCC_ConfigMC1_Prescaler(RCC_RegDef_t *pRCC, uint8_t mcPrescaler);
+static void RCC_ConfigMC2_Prescaler(RCC_RegDef_t *pRCC, uint8_t mcPrescaler);
+
+/***************************************************************************************/
+
+
+/***************** User Application Exposed Function Definitions ***********************/
+
+/*
+ * @fn			- RCC_Config
+ *
+ * @brief		- This function initializes the RCC peripheral with
+ * 				  user provided settings in the configuration
+ * 				  structure.
+ *
+ * @param[RCC_Handle_t] - Base address of the RCC Handle.
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void RCC_Config(RCC_Handle_t *RCC_Handle)
+{
+	RCC_ConfigSysClk(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_ClockSource);
+	RCC_ConfigAHB_Prescaler(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_AHB_Prescaler);
+	RCC_ConfigAPB_LSpPrescaler(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_APB_LSPrescaler);
+	RCC_ConfigAPB_HSpPrescaler(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_APB_HSPrescaler);
+	RCC_ConfigHSE_DivRTC(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_HSE_DivRTC);
+	RCC_ConfigMC_ClkOutput1(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_MCO1_ClkOut);
+	RCC_ConfigMC_ClkOutput2(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_MCO2_ClkOut);
+	RCC_ConfigI2S_ClkSelection(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_I2S_ClkSel);
+	RCC_ConfigMC1_Prescaler(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_MCO1_Prescaler);
+	RCC_ConfigMC1_Prescaler(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_MCO2_Prescaler);
+}
+
 /*
  * @fn			- RCC_GetPCLK1Value
  *
@@ -126,6 +172,76 @@ uint32_t RCC_GetPCLK2Value(void)
 
 
 uint32_t RCC_GetPLLOutputClock(void)
-{	//TODO: Implement.
+{
 	return 0;
 }
+
+
+/***************************************************************************************/
+
+
+/***************** Private Helper Function Definitions *********************************/
+
+static void RCC_ConfigSysClk(RCC_RegDef_t *pRCC, uint8_t sysClk)
+{
+	if(sysClk == RCC_SOURCE_HSI)
+	{//HSI will be the clock source.
+		pRCC->CFGR &= ~(0x3 << RCC_CFGR_SW1);
+	}else if(sysClk == RCC_SOURCE_HSE)
+	{//HSE will be the clock source.
+		pRCC->CFGR &= ~(0x3 << RCC_CFGR_SW1);
+		pRCC->CFGR |= (1 << RCC_CFGR_SW0);
+	}else if(sysClk == RCC_SOURCE_PLL)
+	{//PLL will be the clock source.
+		pRCC->CFGR &= ~(0x3 << RCC_CFGR_SW1);
+		pRCC->CFGR |= (1 << RCC_CFGR_SW1);
+	}else//HSI will be the clock source.
+		pRCC->CFGR &= ~(0x3 << RCC_CFGR_SW1);
+}
+
+static void RCC_ConfigAHB_Prescaler(RCC_RegDef_t *pRCC, uint8_t ahbPrescaler)
+{
+	//TODO: Implement
+}
+
+static void RCC_ConfigAPB_LSpPrescaler(RCC_RegDef_t *pRCC, uint8_t apbLPrescaler)
+{
+	//TODO: Implement
+}
+
+static void RCC_ConfigAPB_HSpPrescaler(RCC_RegDef_t *pRCC, uint8_t apbHPrescaler)
+{
+	//TODO: Implement
+}
+
+static void RCC_ConfigHSE_DivRTC(RCC_RegDef_t *pRCC, uint8_t hseDiv)
+{
+	//TODO: Implement
+}
+
+static void RCC_ConfigMC_ClkOutput1(RCC_RegDef_t *pRCC, uint8_t mcClkOut)
+{
+	//TODO: Implement
+}
+
+static void RCC_ConfigMC_ClkOutput2(RCC_RegDef_t *pRCC, uint8_t mcClkOut)
+{
+	//TODO: Implement
+}
+
+static void RCC_ConfigI2S_ClkSelection(RCC_RegDef_t *pRCC, uint8_t i2sClkSel)
+{
+	//TODO: Implement
+}
+
+static void RCC_ConfigMC1_Prescaler(RCC_RegDef_t *pRCC, uint8_t mcPrescaler)
+{
+	//TODO: Implement
+}
+
+static void RCC_ConfigMC2_Prescaler(RCC_RegDef_t *pRCC, uint8_t mcPrescaler)
+{
+	//TODO: Implement
+}
+
+

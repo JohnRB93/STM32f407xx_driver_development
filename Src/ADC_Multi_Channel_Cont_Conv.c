@@ -28,13 +28,14 @@
  * PA7 -> ADC_IN7  potentiometer2
  */
 
-RCC_Handle_t RCC;
+RCC_Handle_t rcc;
 ADC_Handle_t ADC_IN;
 DMA_Handle_t dma;
 GPIO_Handle_t analogPin, ledPin;
 uint8_t channels[] = {ADC_IN6, ADC_IN7};
 uint8_t PotData[2];
 
+void RCC_Setup(void);
 void GPIO_Config(void);
 void ADC_Config(void);
 void DMA_Config(void);
@@ -55,6 +56,12 @@ int main(void)
 	while(1); //Hang and let the ADC continuously convert.
 }
 
+
+void RCC_Setup(void)
+{
+	/*Setup RCC Configurations*/
+	RCC_Config(&rcc);
+}
 
 void GPIO_Config(void)
 {
