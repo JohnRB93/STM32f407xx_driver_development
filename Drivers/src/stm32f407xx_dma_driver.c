@@ -916,18 +916,18 @@ static void DMA_ConfigDataWidths(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t
 
 static void DMA_ConfigCircularMode(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t EnOrDi)
 {
-	if(EnOrDi == ENABLE)//Enable Circular Mode
-		pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_CIRC);
-	else//Disable Circular Mode
-		pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_CIRC);
+	if(EnOrDi == ENABLE)
+		pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_CIRC);//Enable Circular Mode
+	else
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_CIRC);//Disable Circular Mode
 }
 
 static void DMA_ConfigDoubleBuffMode(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t EnOrDi)
 {
-	if(EnOrDi == ENABLE)//Enable Double Buffer Mode
-		pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_DBM);
-	else//Disable Double Buffer Mode
-		pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_DBM);
+	if(EnOrDi == ENABLE)
+		pDMAx->DMA_Sx[reqStream].SxCR |= (1 << DMA_SXCR_DBM);//Enable Double Buffer Mode
+	else
+		pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_DBM);//Disable Double Buffer Mode
 }
 
 
@@ -962,7 +962,6 @@ static void DMA_HandleTransCmptIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 		case REQ_STREAM_6: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CTCIF6); break;
 		case REQ_STREAM_7: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CTCIF7); break;
 	}
-	DMA_Handle->transCompleted += 1;
 	DMA_Handle->DMA_status = DMA_TRANSFER_COMPLETE;
 	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
 }

@@ -7,6 +7,26 @@
 #include<stdint.h>
 #include<stddef.h>
 
+
+
+/**********************************************************************************************************************/
+/********************************************* How to use this library ************************************************/
+/* At the start of any application, the RCC Handle Structure must be initialized with configuration settings provided */
+/* in the RCC_Config Structure by the application.                                                                    */
+/* */
+/* */
+/* */
+/* */
+/* */
+/* */
+/* */
+/* */
+/* */
+/* */
+/**********************************************************************************************************************/
+
+
+
 /************************************* START: Processor Specific Details **********************************************/
 
 //ARM Cortex Mx Processor NVIC ISERx Register Address
@@ -113,7 +133,7 @@ typedef struct
 typedef struct
 {
 	__vo uint32_t CR;			/*RCC clock control register					Address offset: 0x00*/
-	__vo uint32_t PLL;			/*RCC PLL configuration register				Address offset: 0x04*/
+	__vo uint32_t PLLCFGR;			/*RCC PLL configuration register				Address offset: 0x04*/
 	__vo uint32_t CFGR;			/*RCC clock configuration register				Address offset: 0x08*/
 	__vo uint32_t CIR;			/*RCC clock interrupt register					Address offset: 0x0C*/
 	__vo uint32_t AHB1RSTR;		/*RCC AHB1 peripheral reset register			Address offset: 0x10*/

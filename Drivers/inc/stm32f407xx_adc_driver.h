@@ -12,7 +12,9 @@ typedef struct
 	uint8_t ADC_SampTime;			//@SamplingTime
 	uint8_t ADC_EOCSelect;			//@EOC_Selection
 	uint8_t ADC_ConvMode;			//@ConversionModes
+	uint8_t ADC_ConvGroup;			//@
 	uint8_t ADC_DataAlign;			//@DataAlignment
+	uint8_t ADC_ScanMode;			//ENABLE or DISABLE
 	uint8_t ADC_ClkPreSclr;			//@ClockPreScaler
 	uint8_t ADC_ItEnable;			//@InterruptsEnable
 	uint8_t ADC_WtDgEnable;			//@WatchDogEnable
@@ -55,8 +57,11 @@ typedef struct
 //@ConversionModes
 #define ADC_SINL_CONV_MODE			0
 #define ADC_CONT_CONV_MODE			1
-#define ADC_SCAN_CONV_MODE			2
-#define ADC_DISCONT_CONV_MODE		3
+#define ADC_DISCONT_CONV_MODE		2
+
+//@ConversionGroups
+#define ADC_REGULAR_GROUP		0
+#define ADC_INJECTED_GROUP		1
 
 //@DataAlignment
 #define ADC_DATA_ALIGNMENT_RIGHT	0
@@ -102,10 +107,6 @@ typedef struct
 #define ADC_IN17				17
 #define ADC_IN18				18
 
-//Conversion Groups
-#define ADC_REGULAR_GROUP		0
-#define ADC_INJECTED_GROUP		1
-
 //Number of Conversions
 #define ADC_01_CONVERSIONS		0
 #define ADC_02_CONVERSIONS		1
@@ -138,17 +139,17 @@ typedef struct
 
 /***************************************************************************************/
 /*                         APIs supported by this driver                               */
-/*      For more information about the the APIs check the function definitions         */
+/*      For more information about the APIs check the function definitions             */
 /***************************************************************************************/
 
-void ADC_Init(ADC_Handle_t *pADC_Handle);
-void ADC_PeriClockControl(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
+void ADC_Init(ADC_Handle_t *pADC_Handle, RCC_RegDef_t *pRCC);
+void ADC_PeriClockControl(ADC_RegDef_t *pADCx, RCC_RegDef_t *pRCC, uint8_t EnOrDi);
 void ADC_ChannelSelection(ADC_RegDef_t *pADCx, uint8_t convGroup, uint8_t conversions, uint8_t channels[], uint8_t length);
 void ADC_ConfigSampRate(ADC_RegDef_t *pADCx, uint8_t channel, uint8_t cycles);
 void ADC_SelectEOCFlagTrigger(ADC_Handle_t *ADC_Handle);
 
 void ADC_StartSingleConv(ADC_Handle_t *pADC_Handle, uint8_t group);
-void ADC_StartContConv(ADC_Handle_t *pADC_Handle);
+void ADC_StartContConv(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
 
 uint16_t ADC_ReadRegDR(ADC_RegDef_t *pADCx);
 uint16_t ADC_ReadInjDR(ADC_RegDef_t *pADCx);
@@ -158,7 +159,7 @@ void ADC_SelectWatchDogChannel(ADC_RegDef_t *pADCx, uint8_t channel);
 void ADC_IRQInterruptConfig(uint8_t IRQNumber, uint8_t EnOrDi);
 void ADC_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority);
 void ADC_IRQHandler(void);
-void ADC_IRQHandling(ADC_Handle_t *ADC_Handle, uint16_t *data);
+void ADC_IRQHandling(ADC_Handle_t *ADC_Handle);
 
 void ADC_ApplicationEventCallback(ADC_Handle_t *pADCHandle, uint8_t AppEv);
 

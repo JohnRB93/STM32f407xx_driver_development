@@ -38,7 +38,6 @@ typedef struct
 {
 	DMA_RegDef_t *pDMAx;
 	DMA_Config_t DMA_Config;
-	uint32_t transCompleted;		/*!<Number of completed transactions.>*/
 	uint8_t DMA_status;
 }DMA_Handle_t;
 

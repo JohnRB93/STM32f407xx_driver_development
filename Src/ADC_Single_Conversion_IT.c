@@ -11,6 +11,7 @@
  * Only single conversion is used for either regular or injected
  * conversions.
  * Interrupts are used in this application.
+ * The DMA is not used in this application.
  ******************************************************************************/
 
 #include <stdint.h>
@@ -24,7 +25,7 @@ ADC_Handle_t ADC_IN;
 GPIO_Handle_t analogPin, ledPin;
 
 uint16_t data;
-uint8_t channel = ADC_IN6;
+uint8_t channel = ADC_IN6;/*PA6*/
 
 void GPIO_Config(void);
 void ADC_Config(void);
@@ -35,39 +36,10 @@ int main(void)
 {
 	GPIO_Config();
 	ADC_Config();
+	ADC_ChannelSelection(ADC_IN.pADCx, ADC_IN.ADC_Config.ADC_ConvGroup, ADC_01_CONVERSIONS, &channel, 1);
+	ADC_StartSingleConv(&ADC_IN, ADC_IN.ADC_Config.ADC_ConvGroup);
 
-	while(1)
-	{
-#ifdef RG
-		ADC_ChannelSelection(ADC_IN.pADCx, RG, ADC_01_CONVERSIONS, &channel, 1);
-		ADC_StartSingleConv(&ADC_IN, RG);
-		data = (((255.0/4094)*ADC_ReadRegDR(ADC_IN.pADCx))-(255.0/4094));
-#else
-		ADC_ChannelSelection(ADC_IN.pADCx, IG, ADC_01_CONVERSIONS, &channel, 1);
-		ADC_StartSingleConv(&ADC_IN, IG);
-		data = (((255.0/4094)*ADC_ReadInjDR(ADC_IN.pADCx))-(255.0/4094));
-#endif
-		printf("Data = %d\n", data);
-		if(data >= 245)
-		{
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_13, 1);
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_14, 0);
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_15, 0);
-		}
-		else if(data < 245 && data > 15)
-		{
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_13, 0);
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_14, 1);
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_15, 0);
-		}
-		else
-		{
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_13, 0);
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_14, 0);
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_15, 1);
-		}
-		delay();
-	}
+	while(1);//Hang and let interrupts handle the conversions.
 }
 
 
@@ -99,8 +71,9 @@ void ADC_Config(void)
 	ADC_IN.pADCx = ADC1;
 	ADC_IN.ADC_Config.ADC_BitRes = ADC_12BIT_RESOLUTION;
 	ADC_IN.ADC_Config.ADC_SampTime = ADC_003_CYCLES;
-	ADC_IN.ADC_Config.ADC_ClkPreSclr = ADC_PCLK_DIV2;
+	ADC_IN.ADC_Config.ADC_ClkPreSclr = ADC_PCLK_DIV4;
 	ADC_IN.ADC_Config.ADC_ConvMode = ADC_SINL_CONV_MODE;
+	ADC_IN.ADC_Config.ADC_ConvGroup = RG;/*If RG is not defined, ConvGroup will need to be IG.*/
 	ADC_IN.ADC_Config.ADC_DataAlign = ADC_DATA_ALIGNMENT_RIGHT;
 	ADC_IN.ADC_Config.ADC_ItEnable = ADC_INTERRUPT_ENABLE;
 	ADC_IN.ADC_Config.ADC_DMAEnable = ADC_DMA_DISABLE;
@@ -118,4 +91,44 @@ void delay(void)
 void ADC_IRQHandler(void)
 {
 	ADC_IRQHandling(&ADC_IN);
+}
+
+void ADC_ApplicationEventCallback(ADC_Handle_t *pADCHandle, uint8_t AppEv)
+{
+	if(AppEv == ADC_END_OF_CONVERSION_REG || AppEv == ADC_END_OF_CONVERSION_INJ)
+	{
+#ifdef RG
+		data = (((255.0/4094)*ADC_ReadRegDR(ADC_IN.pADCx))-(255.0/4094));
+#else
+		data = (((255.0/4094)*ADC_ReadInjDR(ADC_IN.pADCx))-(255.0/4094));
+#endif
+		printf("Data = %d\n", data);
+		if(data >= 245)
+		{
+			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_13, 1);
+			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_14, 0);
+			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_15, 0);
+		}
+		else if(data < 245 && data > 15)
+		{
+			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_13, 0);
+			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_14, 1);
+			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_15, 0);
+		}
+		else
+		{
+			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_13, 0);
+			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_14, 0);
+			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_15, 1);
+		}
+
+		ADC_StartSingleConv(&ADC_IN, ADC_IN.ADC_Config.ADC_ConvGroup);
+	}
+
+	if(AppEv == ADC_OVERRUN_SET)
+	{
+		ADC_StartSingleConv(&ADC_IN, ADC_IN.ADC_Config.ADC_ConvGroup);
+	}
+	delay();
+	pADCHandle->ADC_status = ADC_OK;
 }

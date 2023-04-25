@@ -6,9 +6,14 @@ static void ADC_ConverterSwitch(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
 static void ADC_ConfigPreScaler(ADC_RegDef_t *pADCx, uint8_t prescaler);
 static void ADC_ConfigBitRes(ADC_RegDef_t *pADCx, uint8_t resolution);
 static void ADC_ConfigDataAlign(ADC_RegDef_t *pADCx, uint8_t dataAlign);
+static void ADC_ConfigScanMode(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
 static void ADC_ConfigIt(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
 static void ADC_ConfigWtDg(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
 static void ADC_ConfigDMA(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
+static void ADC_HandleAWDIt(ADC_Handle_t *ADC_Handle);
+static void ADC_HandleEOCIt(ADC_Handle_t *ADC_Handle);
+static void ADC_HandleJEOCIt(ADC_Handle_t *ADC_Handle);
+static void ADC_HandleOVRIt(ADC_Handle_t *ADC_Handle);
 
 /***************************************************************************************/
 
@@ -27,13 +32,14 @@ static void ADC_ConfigDMA(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
  *
  * @note		- None.
  */
-void ADC_Init(ADC_Handle_t *pADC_Handle)
+void ADC_Init(ADC_Handle_t *pADC_Handle, RCC_RegDef_t *pRCC)
 {
-	ADC_PeriClockControl(pADC_Handle->pADCx, ENABLE);
+	ADC_PeriClockControl(pADC_Handle->pADCx, *pRCC, ENABLE);
 	ADC_ConverterSwitch(pADC_Handle->pADCx, ENABLE);
 	ADC_ConfigPreScaler(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_ClkPreSclr);
 	ADC_ConfigBitRes(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_BitRes);
 	ADC_ConfigDataAlign(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_DataAlign);
+	ADC_ConfigScanMode(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_ScanMode);
 	ADC_ConfigIt(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_ItEnable);
 	ADC_ConfigWtDg(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_WtDgEnable);
 	ADC_ConfigDMA(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_DMAEnable);
@@ -52,12 +58,12 @@ void ADC_Init(ADC_Handle_t *pADC_Handle)
  *
  * @note		- None.
  */
-void ADC_PeriClockControl(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
+void ADC_PeriClockControl(ADC_RegDef_t *pADCx, RCC_RegDef_t *pRCC, uint8_t EnOrDi)
 {
 	if(EnOrDi == ENABLE)
 	{
 		if(pADCx == ADC1)
-			ADC1_PCLK_EN();
+			pRCC->APB2ENR |= (1 << RCC_APB2ENR_ADC1EN);
 		else if(pADCx == ADC2)
 			ADC2_PCLK_EN();
 		else if(pADCx == ADC3)
@@ -308,15 +314,10 @@ void ADC_StartSingleConv(ADC_Handle_t *ADC_Handle, uint8_t group)
  * 				  to be converted automatically after regular channels in
  * 				  continuous mode (using JAUTO bit).
  */
-void ADC_StartContConv(ADC_Handle_t *ADC_Handle)
+void ADC_StartContConv(ADC_RegDef_t *pADCx)
 {
-	if(ADC_Handle->ADC_Config.ADC_ConvMode == ADC_SCAN_CONV_MODE)
-	{	//Scan Mode will be used.
-		ADC_Handle->pADCx->CR1 |= (1 << ADC_CR1_SCAN);
-	}
-
-	ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_CONT);
-	ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
+	pADCx->CR2 |= (1 << ADC_CR2_CONT);
+	pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
 }
 
 /*
@@ -439,27 +440,26 @@ void ADC_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority)
  * @note		- The interrupt bits(OVRIE, EOCIE, JEOCIE, AWDIE) must
  * 				  be set in order for an interrupt to be triggered.
  */
-void ADC_IRQHandling(ADC_Handle_t *ADC_Handle, uint16_t *data)
+void ADC_IRQHandling(ADC_Handle_t *ADC_Handle)
 {
 	if(((ADC_Handle->pADCx->SR >> ADC_SR_EOC) & 0x1) == SET)
 	{//End of Conversion flag.
-		ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_EOC);
-		ADC_Handle->ADC_status = ADC_END_OF_CONVERSION_REG;
+		ADC_HandleEOCIt(ADC_Handle);
 	}
 
 	if(ADC_Handle->pADCx->SR & (1 << ADC_SR_JEOC))
 	{//End of Injected Conversion flag.
-		ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_JEOC);
+		ADC_HandleJEOCIt(ADC_Handle);
 	}
 
 	if(ADC_Handle->pADCx->SR & (1 << ADC_SR_AWD))
 	{//Analog Watchdog flag.
-
+		ADC_HandleAWDIt(ADC_Handle);
 	}
 
 	if(ADC_Handle->pADCx->SR & (1 << ADC_SR_OVR))
 	{//Overrun flag.
-
+		ADC_HandleOVRIt(ADC_Handle);
 	}
 
 	ADC_ApplicationEventCallback(ADC_Handle, ADC_Handle->ADC_status);
@@ -510,6 +510,15 @@ static void ADC_ConfigDataAlign(ADC_RegDef_t *pADCx, uint8_t dataAlign)
 		pADCx->CR2 |= (1 << ADC_CR2_ALIGN); //Align to the left.
 }
 
+//Configures the use of scan mode.
+static void ADC_ConfigScanMode(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
+{
+	if(EnOrDi == ENABLE)
+		pADCx->CR1 |= (1 << ADC_CR1_SCAN);//Scan Mode will be used.
+	else
+		pADCx->CR1 &= ~(1 << ADC_CR1_SCAN);//Scan Mode will not be used.
+}
+
 //Enables or disables the ADC watch dog feature.
 static void ADC_ConfigWtDg(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
 {
@@ -554,6 +563,30 @@ static void ADC_ConfigDMA(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
 		pADCx->CR2 &= ~(1 << ADC_CR2_DMA);
 		pADCx->CR2 &= ~(1 << ADC_CR2_DDS);
 	}
+}
+
+static void ADC_HandleAWDIt(ADC_Handle_t *ADC_Handle)
+{
+	ADC_Handle->ADC_status = ADC_WATCHDOG_SET;
+	ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_AWD);
+}
+
+static void ADC_HandleEOCIt(ADC_Handle_t *ADC_Handle)
+{
+	ADC_Handle->ADC_status = ADC_END_OF_CONVERSION_REG;
+	ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_EOC);
+}
+
+static void ADC_HandleJEOCIt(ADC_Handle_t *ADC_Handle)
+{
+	ADC_Handle->ADC_status = ADC_END_OF_CONVERSION_INJ;
+	ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_JEOC);
+}
+
+static void ADC_HandleOVRIt(ADC_Handle_t *ADC_Handle)
+{
+	ADC_Handle->ADC_status = ADC_OVERRUN_SET;
+	ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_OVR);
 }
 
 /***************************************************************************************/
