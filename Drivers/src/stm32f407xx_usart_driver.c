@@ -10,34 +10,35 @@
  * @brief		- This function enables or disables peripheral clock for the
  * 				  given USART register.
  *
- * @param[USART_RegDef_t]	- Base address of the USART register.
- * @param[uint8_t]		- ENABLE or DISABLE macros.
+ * @param[USART_RegDef_t*]	- Base address of the USART register.
+ * @param[RCC_RegDef_t*]	- Base address of the RCC register.
+ * @param[uint8_t]			- ENABLE or DISABLE macros.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void USART_PeriClockControl(USART_RegDef_t *pUSARTx, uint8_t EnorDi)
+void USART_PeriClockControl(USART_RegDef_t *pUSARTx, RCC_RegDef_t *pRCC, uint8_t EnorDi)
 {
 	if(EnorDi == ENABLE){
 		if(pUSARTx == USART1){
-			USART1_PCLK_EN();
+			pRCC->APB2ENR |= (1 << RCC_APB2ENR_USART1EN);
 		}else if(pUSARTx == USART2){
-			USART2_PCLK_EN();
+			pRCC->APB1ENR |= (1 << RCC_APB1ENR_USART2EN);
 		}else if(pUSARTx == USART3){
-			USART3_PCLK_EN();
+			pRCC->APB1ENR |= (1 << RCC_APB1ENR_USART3EN);
 		}else if(pUSARTx == USART6){
-			USART6_PCLK_EN();
+			pRCC->APB2ENR |= (1 << RCC_APB2ENR_USART6EN);
 		}
 	}else{
 		if(pUSARTx == USART1){
-			USART1_PCLK_DI();
+			pRCC->APB2ENR &= ~(1 << RCC_APB2ENR_USART1EN);
 		}else if(pUSARTx == USART2){
-			USART2_PCLK_DI();
+			pRCC->APB1ENR &= ~(1 << RCC_APB1ENR_USART2EN);
 		}else if(pUSARTx == USART3){
-			USART3_PCLK_DI();
+			pRCC->APB1ENR &= ~(1 << RCC_APB1ENR_USART3EN);
 		}else if(pUSARTx == USART6){
-			USART6_PCLK_DI();
+			pRCC->APB2ENR &= ~(1 << RCC_APB2ENR_USART6EN);
 		}
 	}
 }
@@ -51,20 +52,21 @@ void USART_PeriClockControl(USART_RegDef_t *pUSARTx, uint8_t EnorDi)
  * @brief		- Initializes the USART peripheral by configuring
  * 				  and programming the CR1, CR2, and CR3 registers.
  *
- * @param[USART_Handle_t]	- Base address of the USART handle.
+ * @param[USART_Handle_t*]	- Base address of the USART handle.
+ * @param[RCC_Handle_t*]	- Base address of the RCC handle.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void USART_Init(USART_Handle_t *pUSARTHandle)
+void USART_Init(USART_Handle_t *pUSARTHandle, RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
 {
 	uint32_t tempreg = 0;
 
 	/*** Configuration of CR1 ***/
 
 	//Enable the Clock for given USART peripheral
-	USART_PeriClockControl(pUSARTHandle->pUSARTx, ENABLE);
+	USART_PeriClockControl(pUSARTHandle->pUSARTx, pRCC, ENABLE);
 
 	//Enable USART Tx and Rx engines according to the USART_Mode configuration item
 	if ( pUSARTHandle->USART_Config.USART_Mode == USART_MODE_ONLY_RX)
@@ -130,7 +132,7 @@ void USART_Init(USART_Handle_t *pUSARTHandle)
 
 	/*** Configuration of BRR(Baudrate register) ***/
 
-	USART_SetBaudRate(pUSARTHandle->pUSARTx, pUSARTHandle->USART_Config.USART_Baud);
+	USART_SetBaudRate(pUSARTHandle->pUSARTx, pRCC, rccConfig, pUSARTHandle->USART_Config.USART_Baud);
 
 }
 
@@ -139,22 +141,33 @@ void USART_Init(USART_Handle_t *pUSARTHandle)
  *
  * @brief		- This function de-initializes the USART handle.
  *
- * @param[USART_RegDef_t]	- Base address of the USART register.
+ * @param[USART_RegDef_t*]	- Base address of the USART register.
+ * @param[RCC_RegDef_t*]	- Base address of the RCC register.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void USART_DeInit(USART_RegDef_t *pUSARTx)
+void USART_DeInit(USART_RegDef_t *pUSARTx, RCC_RegDef_t *pRCC)
 {
-	if(pUSARTx == USART1) {
-		USART1_REG_RESET();
-	}else if(pUSARTx == USART2) {
-		USART2_REG_RESET();
-	}else if(pUSARTx == USART3) {
-		USART3_REG_RESET();
-	}else if(pUSARTx == USART6) {
-		USART6_REG_RESET();
+	if(pUSARTx == USART1)
+	{
+		pRCC->APB2RSTR |= (1 << RCC_APB2RSTR_USART1RST);
+		pRCC->APB2RSTR &= ~(1 << RCC_APB2RSTR_USART1RST);
+	}else if(pUSARTx == USART2)
+	{
+		pRCC->APB1RSTR |= (1 << RCC_APB1RSTR_UART2RST);
+		pRCC->APB1RSTR &= ~(1 << RCC_APB1RSTR_UART2RST);
+	}
+	else if(pUSARTx == USART3)
+	{
+		pRCC->APB1RSTR |= (1 << RCC_APB1RSTR_UART3RST);
+		pRCC->APB1RSTR &= ~(1 << RCC_APB1RSTR_UART3RST);
+	}
+	else if(pUSARTx == USART6)
+	{
+		pRCC->APB2RSTR |= (1 << RCC_APB2RSTR_USART6RST);
+		pRCC->APB2RSTR &= ~(1 << RCC_APB2RSTR_USART6RST);
 	}
 }
 
@@ -713,14 +726,15 @@ void USART_ClearFlag(USART_RegDef_t *pUSARTx, uint16_t StatusFlagName)
  * 						mantissa and fraction parts calculated from
  * 						the user's desired baudrate.
  *
- * @param[USART_RegDef_t]	- Base address of USART register.
+ * @param[USART_RegDef_t*]	- Base address of USART register.
+ * @param[RCC_Handle_t*] 	- Base address of RCC handle.
  * @param[uint32_t]         - BaudRate.
  *
  * @return            - None.
  *
  * @Note              - None.
  */
-void USART_SetBaudRate(USART_RegDef_t *pUSARTx, uint32_t BaudRate)
+void USART_SetBaudRate(USART_RegDef_t *pUSARTx, RCC_RegDef_t *pRCC, RCC_Config_t rccConfig, uint32_t BaudRate)
 {
 	//Variables to hold the APB clock, div, Mantissa and Fraction values.
 	uint32_t PCLKx, usartdiv, M_part, F_part;
@@ -729,10 +743,10 @@ void USART_SetBaudRate(USART_RegDef_t *pUSARTx, uint32_t BaudRate)
 	//Get the value of APB bus clock in to the variable PCLKx
 	if(pUSARTx == USART1 || pUSARTx == USART6)
 	{	//USART1 and USART6 are hanging on APB2 bus
-		PCLKx = RCC_GetPCLK2Value();
+		PCLKx = RCC_GetPCLK2Value(pRCC, rccConfig);
 	}else
 	{	//USART1 and USART6 are hanging on APB1 bus
-		PCLKx = RCC_GetPCLK1Value();
+		PCLKx = RCC_GetPCLK1Value(pRCC, rccConfig);
 	}
 
 	//Check for OVER8 configuration bit

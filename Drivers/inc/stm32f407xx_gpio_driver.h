@@ -1,10 +1,3 @@
-/*
- * stm32f407xx_gpio_driver.h
- *
- *  Created on: Jan 1, 2023
- *      Author: john_
- */
-
 #ifndef INC_STM32F407XX_GPIO_DRIVER_H_
 #define INC_STM32F407XX_GPIO_DRIVER_H_
 
@@ -85,11 +78,11 @@ typedef struct
 *******************************************************************************************************************/
 
 //Peripheral Clock Setup
-void GPIO_PeriClockControl(GPIO_RegDef_t *pGPIOx, uint8_t EnOrDis);
+void GPIO_PeriClockControl(GPIO_RegDef_t *pGPIOx, RCC_RegDef_t *pRCC, uint8_t EnOrDis);
 
 //Initialization and De-initialization
-void GPIO_Init(GPIO_Handle_t *pGPIOHandle);
-void GPIO_DeInit(GPIO_RegDef_t *pGPIOx);
+void GPIO_Init(GPIO_Handle_t *pGPIOHandle, RCC_RegDef_t *pRCC);
+void GPIO_DeInit(GPIO_RegDef_t *pGPIOx, RCC_RegDef_t *pRCC);
 
 //Read Data and Write Data
 uint8_t GPIO_ReadFromInputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber);

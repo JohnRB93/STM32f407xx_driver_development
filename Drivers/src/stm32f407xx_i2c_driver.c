@@ -252,30 +252,31 @@ void I2C_CloseReceiveData(I2C_Handle_t *pI2CHandle)
  * @brief		- This function enables or disables peripheral clock for the
  * 				  given I2C register.
  *
- * @param[I2C_RegDef_t]	- Base address of the I2C register.
- * @param[uint8_t]		- ENABLE or DISABLE macros.
+ * @param[I2C_RegDef_t*]	- Base address of the I2C register.
+ * @param[RCC_RegDef_t*]	- Base address of the RCC register.
+ * @param[uint8_t]			- ENABLE or DISABLE macros.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void I2C_PeriClockControl(I2C_RegDef_t *pI2Cx, uint8_t EnOrDi)
+void I2C_PeriClockControl(I2C_RegDef_t *pI2Cx, RCC_RegDef_t *pRCC, uint8_t EnOrDi)
 {
 	if(EnOrDi == ENABLE){
 		if(pI2Cx == I2C1){
-			I2C1_PCLK_EN();
+			pRCC->APB1ENR |= (1 << RCC_APB1ENR_I2C1EN);
 		}else if(pI2Cx == I2C2){
-			I2C2_PCLK_EN();
+			pRCC->APB1ENR |= (1 << RCC_APB1ENR_I2C2EN);
 		}else if(pI2Cx == I2C3){
-			I2C3_PCLK_EN();
+			pRCC->APB1ENR |= (1 << RCC_APB1ENR_I2C3EN);
 		}
 	}else{
 		if(pI2Cx == I2C1){
-			I2C1_PCLK_DI();
+			pRCC->APB1ENR &= ~(1 << RCC_APB1ENR_I2C1EN);
 		}else if(pI2Cx == I2C2){
-			I2C2_PCLK_DI();
+			pRCC->APB1ENR &= ~(1 << RCC_APB1ENR_I2C2EN);
 		}else if(pI2Cx == I2C3){
-			I2C3_PCLK_DI();
+			pRCC->APB1ENR &= ~(1 << RCC_APB1ENR_I2C3EN);
 		}
 	}
 }
@@ -288,18 +289,19 @@ void I2C_PeriClockControl(I2C_RegDef_t *pI2Cx, uint8_t EnOrDi)
  *
  * @brief		- Initializes the I2C peripheral.
  *
- * @param[I2C_Handle_t]	- Base address of the I2C handle.
+ * @param[I2C_Handle_t*]	- Base address of the I2C handle.
+ * @param[RCC_RegDef_t*]	- Base address of the RCC register.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void I2C_Init(I2C_Handle_t *pI2CHandle)
+void I2C_Init(I2C_Handle_t *pI2CHandle, RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
 {
 	uint32_t tempVal = 0;
 
 	//Enable the clock for the I2Cx peripheral.
-	I2C_PeriClockControl(pI2CHandle->pI2Cx, ENABLE);
+	I2C_PeriClockControl(pI2CHandle->pI2Cx, pRCC, ENABLE);
 
 	//Ack control bit.
 	tempVal |= pI2CHandle->I2C_Config.I2C_ACKControl << I2C_CR1_ACK;
@@ -307,7 +309,7 @@ void I2C_Init(I2C_Handle_t *pI2CHandle)
 
 	//Configure the FREQ field of CR2.
 	tempVal = 0;
-	tempVal |= RCC_GetPCLK1Value() / _1MHZ;
+	tempVal |= RCC_GetPCLK1Value(pRCC, rccConfig) / _1MHZ;
 	pI2CHandle->pI2Cx->CR2 = (tempVal & 0x3F); //CR2 = (tempReg & 111111)
 
 	//Program the device own address.
@@ -321,7 +323,7 @@ void I2C_Init(I2C_Handle_t *pI2CHandle)
 	tempVal = 0;
 	if(pI2CHandle->I2C_Config.I2C_SCLSpeed <= I2C_SCL_SPEED_SM)
 	{	//Standard Mode
-		ccr_value = (RCC_GetPCLK1Value() / (2 * pI2CHandle->I2C_Config.I2C_SCLSpeed));
+		ccr_value = (RCC_GetPCLK1Value(pRCC, rccConfig) / (2 * pI2CHandle->I2C_Config.I2C_SCLSpeed));
 		tempVal |= (ccr_value & 0xFFF);
 	}
 	else
@@ -330,11 +332,11 @@ void I2C_Init(I2C_Handle_t *pI2CHandle)
 		tempVal |= (pI2CHandle->I2C_Config.I2C_FMDutyCycle << I2C_CCR_DUTY);
 		if(pI2CHandle->I2C_Config.I2C_FMDutyCycle == I2C_FM_Duty_2)
 		{
-			ccr_value = (RCC_GetPCLK1Value() / (3 * pI2CHandle->I2C_Config.I2C_SCLSpeed));
+			ccr_value = (RCC_GetPCLK1Value(pRCC, rccConfig) / (3 * pI2CHandle->I2C_Config.I2C_SCLSpeed));
 		}
 		else
 		{
-			ccr_value = (RCC_GetPCLK1Value() / (25 * pI2CHandle->I2C_Config.I2C_SCLSpeed));
+			ccr_value = (RCC_GetPCLK1Value(pRCC, rccConfig) / (25 * pI2CHandle->I2C_Config.I2C_SCLSpeed));
 		}
 		tempVal |= (ccr_value & 0xFFF);
 	}
@@ -343,11 +345,11 @@ void I2C_Init(I2C_Handle_t *pI2CHandle)
 	//TRISE Configuration
 	if(pI2CHandle->I2C_Config.I2C_SCLSpeed <= I2C_SCL_SPEED_SM)
 	{	//Standard Mode
-		tempVal = (RCC_GetPCLK1Value() / _1MHZ) + 1;
+		tempVal = (RCC_GetPCLK1Value(pRCC, rccConfig) / _1MHZ) + 1;
 	}
 	else
 	{	//Fast Mode
-		tempVal = ((RCC_GetPCLK1Value() * 300) / _1NANO) + 1;
+		tempVal = ((RCC_GetPCLK1Value(pRCC, rccConfig) * 300) / _1NANO) + 1;
 	}
 	pI2CHandle->pI2Cx->TRISE = (tempVal & 0x3F);
 }
@@ -361,20 +363,27 @@ void I2C_Init(I2C_Handle_t *pI2CHandle)
  *
  * @brief		- This function de-initializes the I2C handle.
  *
- * @param[I2C_RegDef_t]	- Base address of the I2C register.
+ * @param[I2C_RegDef_t*]	- Base address of the I2C register.
+ * @param[RCC_RegDef_t*]	- Base address of the RCC register.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void I2C_DeInit(I2C_RegDef_t *pI2Cx)
+void I2C_DeInit(I2C_RegDef_t *pI2Cx, RCC_RegDef_t *pRCC)
 {
-	if(pI2Cx == I2C1) {
-		I2C1_REG_RESET();
-	}else if(pI2Cx == I2C2) {
-		I2C2_REG_RESET();
-	}else if(pI2Cx == I2C3) {
-		I2C3_REG_RESET();
+	if(pI2Cx == I2C1)
+	{
+		(pRCC->APB1RSTR |= (1 << RCC_APB1RSTR_I2C1RST));
+		(pRCC->APB1RSTR &= ~(1 << RCC_APB1RSTR_I2C1RST));
+	}else if(pI2Cx == I2C2)
+	{
+		(pRCC->APB1RSTR |= (1 << RCC_APB1RSTR_I2C2RST));
+		(pRCC->APB1RSTR &= ~(1 << RCC_APB1RSTR_I2C2RST));
+	}else if(pI2Cx == I2C3)
+	{
+		(pRCC->APB1RSTR |= (1 << RCC_APB1RSTR_I2C3RST));
+		(pRCC->APB1RSTR &= ~(1 << RCC_APB1RSTR_I2C3RST));
 	}
 }
 

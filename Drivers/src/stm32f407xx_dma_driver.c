@@ -36,14 +36,40 @@ static void DMA_HandleDirectErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream);
  * 				  provided configurations.
  *
  * @param[ADC_Handle_t*]	- Base address of the DMA handle.
+ * @param[RCC_RegDef_t*]	- Base address of the RCC register.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void DMA_Init(DMA_Handle_t *DMA_Handle)
+void DMA_Init(DMA_Handle_t *DMA_Handle, RCC_RegDef_t *pRCC)
 {
-	DMA_PeriClockControl(DMA_Handle->pDMAx, ENABLE);
+	DMA_PeriClockControl(DMA_Handle->pDMAx, pRCC, ENABLE);
+}
+
+/*
+ * @fn			- DMA_DeInit
+ *
+ * @brief		- This function de-initializes the DMA peripheral.
+ *
+ * @param[ADC_Handle_t*]	- Base address of the DMA handle.
+ * @param[RCC_RegDef_t*]	- Base address of the RCC register.
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void DMA_DeInit(DMA_Handle_t *DMA_Handle, RCC_RegDef_t *pRCC)
+{
+	if(DMA_Handle->pDMAx == DMA1)
+	{
+		pRCC->AHB1RSTR |= (1 << RCC_AHB1RSTR_DMA1RST);
+		pRCC->AHB1RSTR &= ~(1 << RCC_AHB1RSTR_DMA1RST);
+	}else
+	{
+		pRCC->AHB1RSTR |= (1 << RCC_AHB1RSTR_DMA2RST);
+		pRCC->AHB1RSTR &= ~(1 << RCC_AHB1RSTR_DMA2RST);
+	}
 }
 
 /*
@@ -53,26 +79,27 @@ void DMA_Init(DMA_Handle_t *DMA_Handle)
  * 				  given ADC register.
  *
  * @param[DMA_RegDef_t*]	- Base address of the DMA register.
+ * @param[RCC_RegDef_t*]	- Base address of the RCC register.
  * @param[uint8_t]			- ENABLE or DISABLE macros.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void DMA_PeriClockControl(DMA_RegDef_t *pDMAx, uint8_t EnOrDi)
+void DMA_PeriClockControl(DMA_RegDef_t *pDMAx, RCC_RegDef_t *pRCC, uint8_t EnOrDi)
 {
 	if(EnOrDi == ENABLE)
 	{
 		if(pDMAx == DMA1)
-			DMA1_PCLK_EN();
+			pRCC->AHB1ENR |= (1 << RCC_AHB1ENR_DMA1EN);
 		else if(pDMAx == DMA2)
-			DMA2_PCLK_EN();
+			pRCC->AHB1ENR |= (1 << RCC_AHB1ENR_DMA2EN);
 	}else
 	{
 		if(pDMAx == DMA1)
-			DMA1_PCLK_DI();
+			pRCC->AHB1ENR &= ~(1 << RCC_AHB1ENR_DMA1EN);
 		else if(pDMAx == DMA2)
-			DMA2_PCLK_DI();
+			pRCC->AHB1ENR &= ~(1 << RCC_AHB1ENR_DMA2EN);
 	}
 }
 

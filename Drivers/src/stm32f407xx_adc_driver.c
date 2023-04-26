@@ -27,6 +27,7 @@ static void ADC_HandleOVRIt(ADC_Handle_t *ADC_Handle);
  * 				  provided configurations.
  *
  * @param[ADC_Handle_t*]	- Base address of the ADC handle.
+ * @param[RCC_RegDef_t*]	- Base address of the RCC register.
  *
  * @return		- None.
  *
@@ -34,7 +35,7 @@ static void ADC_HandleOVRIt(ADC_Handle_t *ADC_Handle);
  */
 void ADC_Init(ADC_Handle_t *pADC_Handle, RCC_RegDef_t *pRCC)
 {
-	ADC_PeriClockControl(pADC_Handle->pADCx, *pRCC, ENABLE);
+	ADC_PeriClockControl(pADC_Handle->pADCx, pRCC, ENABLE);
 	ADC_ConverterSwitch(pADC_Handle->pADCx, ENABLE);
 	ADC_ConfigPreScaler(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_ClkPreSclr);
 	ADC_ConfigBitRes(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_BitRes);
@@ -46,12 +47,29 @@ void ADC_Init(ADC_Handle_t *pADC_Handle, RCC_RegDef_t *pRCC)
 }
 
 /*
+ * @fn			- ADC_DeInit
+ *
+ * @brief		- This function de-initializes the ADC peripheral.
+ *
+ * @param[RCC_RegDef_t*]	- Base address of the RCC register.
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void ADC_DeInit(RCC_RegDef_t *pRCC)
+{
+	pRCC->APB2RSTR |= (1 << RCC_APB2RSTR_ADCRST); pRCC->APB2RSTR &= ~(1 << RCC_APB2RSTR_ADCRST);
+}
+
+/*
  * @fn			- ADC_PeriClockControl
  *
  * @brief		- This function enables or disables peripheral clock for the
  * 				  given ADC register.
  *
  * @param[ADC_RegDef_t*]	- Base address of the ADC register.
+ * @param[RCC_RegDef_t*]	- Base address of the RCC register.
  * @param[uint8_t]			- ENABLE or DISABLE macros.
  *
  * @return		- None.
@@ -65,17 +83,17 @@ void ADC_PeriClockControl(ADC_RegDef_t *pADCx, RCC_RegDef_t *pRCC, uint8_t EnOrD
 		if(pADCx == ADC1)
 			pRCC->APB2ENR |= (1 << RCC_APB2ENR_ADC1EN);
 		else if(pADCx == ADC2)
-			ADC2_PCLK_EN();
+			pRCC->APB2ENR |= (1 << RCC_APB2ENR_ADC2EN);
 		else if(pADCx == ADC3)
-			ADC3_PCLK_EN();
+			pRCC->APB2ENR |= (1 << RCC_APB2ENR_ADC3EN);
 	}else
 	{
 		if(pADCx == ADC1)
-			ADC1_PCLK_DI();
+			pRCC->APB2ENR &= ~(1 << RCC_APB2ENR_ADC1EN);
 		else if(pADCx == ADC2)
-			ADC2_PCLK_DI();
+			pRCC->APB2ENR &= ~(1 << RCC_APB2ENR_ADC2EN);
 		else if(pADCx == ADC3)
-			ADC3_PCLK_DI();
+			pRCC->APB2ENR &= ~(1 << RCC_APB2ENR_ADC3EN);
 	}
 }
 

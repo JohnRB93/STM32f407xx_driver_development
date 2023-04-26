@@ -45,13 +45,14 @@ void delay(void);
 
 int main(void)
 {
+	RCC_Setup();
 	GPIO_Config();
 	ADC_Config();
 	DMA_Config();
 
 	DMA_ConfigInterrupts(&dma, REQ_STREAM_0);
 	DMA_ActivateStream(dma.pDMAx, REQ_STREAM_0);
-	ADC_StartContConv(&ADC_IN);
+	ADC_StartContConv(ADC_IN.pADCx);
 
 	while(1); //Hang and let the ADC continuously convert.
 }
@@ -60,7 +61,20 @@ int main(void)
 void RCC_Setup(void)
 {
 	/*Setup RCC Configurations*/
+	rcc.pRCC = RCC;
+	rcc.RCC_Config.RCC_ClockSource = RCC_SOURCE_PLL;
+	rcc.RCC_Config.RCC_PLL_Config.PLL_M = 8;// 16MHz / 8 => 2MHz
+	rcc.RCC_Config.RCC_PLL_Config.PLL_N = 168;// 2MHz * 168 => 336MHz
+	rcc.RCC_Config.RCC_PLL_Config.PLL_P = PLL_P_DIV_2;// 336MHz / 2 => 168MHz
+	rcc.RCC_Config.RCC_PLL_Config.PLL_SRC = PLL_SRC_HSI;
+	RCC_ConfigPLLReg(rcc.pRCC, rcc.RCC_Config.RCC_PLL_Config);
+	rcc.RCC_Config.RCC_AHB_Prescaler = 1;// 168MHz / 1 => 168MHz AHB1Bus
+	rcc.RCC_Config.RCC_APB_HSPrescaler = RCC_AHB_DIV_02;// 168MHz / 2 => 84MHz APB2Bus
+	rcc.RCC_Config.RCC_APB_LSPrescaler = RCC_AHB_DIV_08;// 168MHz / 8 => 21MHz APB1Bus
 	RCC_Config(&rcc);
+	RCC_Enable(rcc.pRCC, rcc.RCC_Config);
+
+	while(RCC_GetSysClkSwStatus(rcc.pRCC) != 0);
 }
 
 void GPIO_Config(void)
@@ -69,10 +83,10 @@ void GPIO_Config(void)
 	analogPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_ANALOG;
 	analogPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_HIGH;
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_6;
-	GPIO_Init(&analogPin);//Pot1Read
+	GPIO_Init(&analogPin, rcc.pRCC);//Pot1Read
 
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_7;
-	GPIO_Init(&analogPin);//Pot1Read
+	GPIO_Init(&analogPin, rcc.pRCC);//Pot1Read
 
 	ledPin.pGPIOx = GPIOB;
 	ledPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_OUT;
@@ -80,13 +94,13 @@ void GPIO_Config(void)
 	ledPin.GPIO_PinConfig.GPIO_PinOPType = GPIO_OP_TYPE_PP;
 	ledPin.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
 	ledPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
-	GPIO_Init(&ledPin);//RedLedPin
+	GPIO_Init(&ledPin, rcc.pRCC);//RedLedPin
 
 	ledPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_14;
-	GPIO_Init(&ledPin);//YellowLedPin
+	GPIO_Init(&ledPin, rcc.pRCC);//YellowLedPin
 
 	ledPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_15;
-	GPIO_Init(&ledPin);//GreenLedPin
+	GPIO_Init(&ledPin, rcc.pRCC);//GreenLedPin
 }
 
 void ADC_Config(void)
@@ -94,13 +108,13 @@ void ADC_Config(void)
 	ADC_IN.pADCx = ADC1;
 	ADC_IN.ADC_Config.ADC_BitRes = ADC_08BIT_RESOLUTION;
 	ADC_IN.ADC_Config.ADC_ClkPreSclr = ADC_PCLK_DIV8;/* 84Mz / 8 -> 10.5Mz */
-	ADC_IN.ADC_Config.ADC_ConvMode = ADC_SCAN_CONV_MODE;
+	ADC_IN.ADC_Config.ADC_ConvMode = ADC_CONT_CONV_MODE;
 	ADC_IN.ADC_Config.ADC_EOCSelect = ADC_END_OF_SEQ;
 	ADC_IN.ADC_Config.ADC_DataAlign = ADC_DATA_ALIGNMENT_RIGHT;
 	ADC_IN.ADC_Config.ADC_WtDgEnable = ADC_WATCHDOG_DISABLE;
 	ADC_IN.ADC_Config.ADC_DMAEnable = ADC_DMA_ENABLE;
 	ADC_IN.ADC_Config.ADC_ItEnable = ADC_INTERRUPT_ENABLE;
-	ADC_Init(&ADC_IN);
+	ADC_Init(&ADC_IN, rcc.pRCC);
 	ADC_ChannelSelection(ADC_IN.pADCx, ADC_REGULAR_GROUP, ADC_02_CONVERSIONS, channels, 2);
 	ADC_ConfigSampRate(ADC_IN.pADCx, channels[0], ADC_480_CYCLES);
 	ADC_ConfigSampRate(ADC_IN.pADCx, channels[1], ADC_480_CYCLES);
@@ -128,7 +142,7 @@ void DMA_Config(void)
 	dma.DMA_Config.DMA_ItEnable.DMA_HTIE = ENABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_TCIE = ENABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_TEIE = ENABLE;
-	DMA_Init(&dma);
+	DMA_Init(&dma, rcc.pRCC);
 	DMA_ConfigStream(&dma, REQ_STREAM_0, (uint32_t)(ADC1_BASEADDR + 0x4C), (uint32_t)(PotData), REQ_STR_CH_0);
 	DMA_IRQInterruptConfig(IRQ_NO_DMA2_STREAM0, ENABLE);
 }

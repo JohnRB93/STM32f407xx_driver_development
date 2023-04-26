@@ -33,7 +33,6 @@ typedef struct
 	uint8_t			RxBusyState;			/*!<To store Communication state   @I2C_application_status>*/
 	uint32_t		TxLen;					/*!<To store Tx length>*/
 	uint32_t		RxLen;					/*!<To store Rx length>*/
-
 }USART_Handle_t;
 
 
@@ -112,11 +111,11 @@ typedef struct
  ******************************************************************************************/
 
 //Peripheral Clock setup
-void USART_PeriClockControl(USART_RegDef_t *pUSARTx, uint8_t EnorDi);
+void USART_PeriClockControl(USART_RegDef_t *pUSARTx, RCC_RegDef_t *pRCC, uint8_t EnorDi);
 
 //Init and De-init
-void USART_Init(USART_Handle_t *pUSARTHandle);
-void USART_DeInit(USART_RegDef_t *pUSARTx);
+void USART_Init(USART_Handle_t *pUSARTHandle, RCC_RegDef_t *pRCC, RCC_Config_t rccConfig);
+void USART_DeInit(USART_RegDef_t *pUSARTx, RCC_RegDef_t *pRCC);
 
 //Data Send and Receive
 void USART_SendData(USART_Handle_t *pUSARTHandle, uint8_t *pTxBuffer, uint32_t Len);
@@ -133,7 +132,7 @@ void USART_IRQHandling(USART_Handle_t *pHandle);
 void USART_PeripheralControl(USART_RegDef_t *pUSARTx, uint8_t EnOrDi);
 uint8_t USART_GetFlagStatus(USART_RegDef_t *pUSARTx , uint8_t FlagName);
 void USART_ClearFlag(USART_RegDef_t *pUSARTx, uint16_t StatusFlagName);
-void USART_SetBaudRate(USART_RegDef_t *pUSARTx, uint32_t BaudRate);
+void USART_SetBaudRate(USART_RegDef_t *pUSARTx, RCC_RegDef_t *pRCC, RCC_Config_t rccConfig, uint32_t BaudRate);
 
 //Application callback
 void USART_ApplicationEventCallback(USART_Handle_t *pUSARTHandle,uint8_t AppEv);

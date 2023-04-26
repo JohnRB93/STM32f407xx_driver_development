@@ -143,13 +143,14 @@ typedef struct
 /***************************************************************************************/
 
 void ADC_Init(ADC_Handle_t *pADC_Handle, RCC_RegDef_t *pRCC);
+void ADC_DeInit(RCC_RegDef_t *pRCC);
 void ADC_PeriClockControl(ADC_RegDef_t *pADCx, RCC_RegDef_t *pRCC, uint8_t EnOrDi);
 void ADC_ChannelSelection(ADC_RegDef_t *pADCx, uint8_t convGroup, uint8_t conversions, uint8_t channels[], uint8_t length);
 void ADC_ConfigSampRate(ADC_RegDef_t *pADCx, uint8_t channel, uint8_t cycles);
 void ADC_SelectEOCFlagTrigger(ADC_Handle_t *ADC_Handle);
 
 void ADC_StartSingleConv(ADC_Handle_t *pADC_Handle, uint8_t group);
-void ADC_StartContConv(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
+void ADC_StartContConv(ADC_RegDef_t *pADCx);
 
 uint16_t ADC_ReadRegDR(ADC_RegDef_t *pADCx);
 uint16_t ADC_ReadInjDR(ADC_RegDef_t *pADCx);

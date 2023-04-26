@@ -5,26 +5,15 @@
 
 /***************** DMA Structure Definitions *******************************************/
 
-//RCC Configuration Structure
-typedef struct
-{
-	uint8_t RCC_ClockSource;			//@RCC_ClockSource
-	uint8_t RCC_AHB_Prescaler;			//@AHB_Prescaler
-	uint8_t RCC_APB_LSPrescaler;		//@APB_LowSpeedPrescaler
-	uint8_t RCC_APB_HSPrescaler;		//@APB_HighSpeedPrescaler
-	uint8_t RCC_HSE_DivRTC;				//@HSE_DivisionFactorForRTC_Clock
-	uint8_t RCC_MCO1_ClkOut;			//@MicrocontrollerClockOutput1
-	uint8_t RCC_MCO2_ClkOut;			//@MicrocontrollerClockOutput2
-	uint8_t RCC_MCO1_Prescaler;			//@MicrocontrollerPrescaler
-	uint8_t RCC_MCO2_Prescaler;			//@MicrocontrollerPrescaler
-	uint8_t RCC_I2S_ClkSel;				//@I2S_ClockSelection
-}RCC_Config_t;
 
-//RCC Handle Structure
+
+
+
+//RCC Handle Structure Definition
 typedef struct
 {
 	RCC_RegDef_t *pRCC;
-	RCC_Config_t RCC_Config;
+	RCC_Config_t RCC_Config; //Defined in the main header file.
 }RCC_Handle_t;
 
 /***************************************************************************************/
@@ -37,7 +26,6 @@ typedef struct
 #define RCC_SOURCE_PLL			2
 
 //@AHB_Prescaler
-#define RCC_AHB_NO_DIV			0
 #define RCC_AHB_DIV_002			8
 #define RCC_AHB_DIV_004			9
 #define RCC_AHB_DIV_008			10
@@ -47,13 +35,15 @@ typedef struct
 #define RCC_AHB_DIV_256			14
 #define RCC_AHB_DIV_512			15
 
-//@APB_Prescaler (If not divided, use the RCC_AHB_NO_DIV macro.)
+//@APB_Prescaler
 #define RCC_AHB_DIV_02			4
 #define RCC_AHB_DIV_04			5
 #define RCC_AHB_DIV_08			6
-#define RCC_AHB_DIV_016			7
+#define RCC_AHB_DIV_16			7
 
 //@HSE_DivisionFactorForRTC_Clock
+#define RCC_HSE_DIV_00			0
+#define RCC_HSE_DIV_01			RCC_HSE_DIV_00
 #define RCC_HSE_DIV_02			2
 #define RCC_HSE_DIV_03			3
 #define RCC_HSE_DIV_04			4
@@ -98,7 +88,6 @@ typedef struct
 #define RCC_MCO2_PLL_OUT		3
 
 //@MicrocontrollerPrescaler
-#define RCC_NO_DIV				0
 #define RCC_DIV_2				4
 #define RCC_DIV_3				5
 #define RCC_DIV_4				6
@@ -107,6 +96,16 @@ typedef struct
 //@I2S_ClockSelection
 #define RCC_PLLI2S_CLK			0
 #define RCC_EXTERN_CLK			1
+
+//@PLL_P
+#define PLL_P_DIV_2				0
+#define PLL_P_DIV_4				1
+#define PLL_P_DIV_6				2
+#define PLL_P_DIV_8				3
+
+//@PLL_SRC
+#define PLL_SRC_HSI				0
+#define PLL_SRC_HSE				1
 
 
 
@@ -118,11 +117,15 @@ typedef struct
 /*      For more information about the the APIs check the function definitions         */
 /***************************************************************************************/
 
-void RCC_Init(void);
+void RCC_Config(RCC_Handle_t *RCC_Handle);
+uint8_t RCC_GetSysClkSwStatus(RCC_RegDef_t *pRCC);
 
-uint32_t RCC_GetPCLK1Value(void);
-uint32_t RCC_GetPCLK2Value(void);
+uint32_t RCC_GetPCLK1Value(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig);
+uint32_t RCC_GetPCLK2Value(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig);
 
-uint32_t RCC_GetPLLOutputClock(void);
+void RCC_ConfigPLLReg(RCC_RegDef_t *pRCC, RCC_PLL_Config_t PLL_Config);
+uint32_t RCC_GetPLLOutputClock(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig);
+
+void RCC_Enable(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig);
 
 #endif /* INC_STM32F407XX_RCC_DRIVER_H_ */

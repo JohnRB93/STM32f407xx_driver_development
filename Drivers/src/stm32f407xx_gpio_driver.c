@@ -8,54 +8,55 @@
  *
  * @brief		- This function enables or disables peripheral clock for the given GPIO port.
  *
- * @param[in]	- Base address of the GPIO peripheral.
- * @param[in]	- ENABLE or DISABLE macros.
+ * @param[GPIO_RegDef_t*]	- Base address of the GPIO peripheral.
+ * @param[RCC_RegDef_t*]	- Base address of the RCC Register.
+ * @param[in]				- ENABLE or DISABLE macros.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void GPIO_PeriClockControl(GPIO_RegDef_t *pGPIOx, uint8_t EnOrDis)
+void GPIO_PeriClockControl(GPIO_RegDef_t *pGPIOx, RCC_RegDef_t *pRCC, uint8_t EnOrDis)
 {
 	if(EnOrDis == ENABLE) {
 		if(pGPIOx == GPIOA) {
-			GPIOA_PCLK_EN();
+			pRCC->AHB1ENR |= (1 << RCC_AHB1ENR_GPIOAEN);
 		}else if(pGPIOx == GPIOB){
-			GPIOB_PCLK_EN();
+			pRCC->AHB1ENR |= (1 << RCC_AHB1ENR_GPIOBEN);
 		}else if(pGPIOx == GPIOC){
-			GPIOC_PCLK_EN();
+			pRCC->AHB1ENR |= (1 << RCC_AHB1ENR_GPIOCEN);
 		}else if(pGPIOx == GPIOD){
-			GPIOD_PCLK_EN();
+			pRCC->AHB1ENR |= (1 << RCC_AHB1ENR_GPIODEN);
 		}else if(pGPIOx == GPIOE){
-			GPIOE_PCLK_EN();
+			pRCC->AHB1ENR |= (1 << RCC_AHB1ENR_GPIOEEN);
 		}else if(pGPIOx == GPIOF){
-			GPIOF_PCLK_EN();
+			pRCC->AHB1ENR |= (1 << RCC_AHB1ENR_GPIOFEN);
 		}else if(pGPIOx == GPIOG){
-			GPIOG_PCLK_EN();
+			pRCC->AHB1ENR |= (1 << RCC_AHB1ENR_GPIOGEN);
 		}else if(pGPIOx == GPIOH){
-			GPIOH_PCLK_EN();
+			pRCC->AHB1ENR |= (1 << RCC_AHB1ENR_GPIOHEN);
 		}else if(pGPIOx == GPIOI){
-			GPIOI_PCLK_EN();
+			pRCC->AHB1ENR |= (1 << RCC_AHB1ENR_GPIOIEN);
 		}
 	}else {
 		if(pGPIOx == GPIOA) {
-			GPIOA_PCLK_DI();
+			pRCC->AHB1ENR &= ~(1 << RCC_AHB1ENR_GPIOAEN);
 		}else if(pGPIOx == GPIOB){
-			GPIOB_PCLK_DI();
+			pRCC->AHB1ENR &= ~(1 << RCC_AHB1ENR_GPIOBEN);
 		}else if(pGPIOx == GPIOC){
-			GPIOC_PCLK_DI();
+			pRCC->AHB1ENR &= ~(1 << RCC_AHB1ENR_GPIOCEN);
 		}else if(pGPIOx == GPIOD){
-			GPIOD_PCLK_DI();
+			pRCC->AHB1ENR &= ~(1 << RCC_AHB1ENR_GPIODEN);
 		}else if(pGPIOx == GPIOE){
-			GPIOE_PCLK_DI();
+			pRCC->AHB1ENR &= ~(1 << RCC_AHB1ENR_GPIOEEN);
 		}else if(pGPIOx == GPIOF){
-			GPIOF_PCLK_DI();
+			pRCC->AHB1ENR &= ~(1 << RCC_AHB1ENR_GPIOFEN);
 		}else if(pGPIOx == GPIOG){
-			GPIOG_PCLK_DI();
+			pRCC->AHB1ENR &= ~(1 << RCC_AHB1ENR_GPIOGEN);
 		}else if(pGPIOx == GPIOH){
-			GPIOH_PCLK_DI();
+			pRCC->AHB1ENR &= ~(1 << RCC_AHB1ENR_GPIOHEN);
 		}else if(pGPIOx == GPIOI){
-			GPIOI_PCLK_DI();
+			pRCC->AHB1ENR &= ~(1 << RCC_AHB1ENR_GPIOIEN);
 		}
 	}
 }
@@ -67,18 +68,19 @@ void GPIO_PeriClockControl(GPIO_RegDef_t *pGPIOx, uint8_t EnOrDis)
  *
  * @brief		- This function initializes the GPIO handle.
  *
- * @param[in]	- Base address of the GPIO handle.
+ * @param[GPIO_Handle_t*]	- Base address of the GPIO handle.
+ * @param[RCC_RegDef_t*]	- Base address of the RCC Register.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void GPIO_Init(GPIO_Handle_t *pGPIOHandle)
+void GPIO_Init(GPIO_Handle_t *pGPIOHandle, RCC_RegDef_t *pRCC)
 {
 	uint32_t temp = 0;
 
 	//Enable the peripheral clock.
-	GPIO_PeriClockControl(pGPIOHandle->pGPIOx, ENABLE);
+	GPIO_PeriClockControl(pGPIOHandle->pGPIOx, pRCC, ENABLE);
 
 	//1. Configure the mode of the GPIO pin
 	if (pGPIOHandle->GPIO_PinConfig.GPIO_PinMode <= GPIO_MODE_ANALOG)
@@ -153,32 +155,51 @@ void GPIO_Init(GPIO_Handle_t *pGPIOHandle)
  *
  * @brief		- This function de-initializes the GPIO handle.
  *
- * @param[in]	- Base address of the GPIO handle.
+ * @param[GPIO_RegDef_t*]	- Base address of the GPIO handle.
+ * @param[RCC_RegDef_t*]	- Base address of the RCC Register.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void GPIO_DeInit(GPIO_RegDef_t *pGPIOx)
+void GPIO_DeInit(GPIO_RegDef_t *pGPIOx, RCC_RegDef_t *pRCC)
 {
-	if(pGPIOx == GPIOA) {
-		GPIOA_REG_RESET();
-	}else if(pGPIOx == GPIOB){
-		GPIOB_REG_RESET();
-	}else if(pGPIOx == GPIOC){
-		GPIOC_REG_RESET();
-	}else if(pGPIOx == GPIOD){
-		GPIOD_REG_RESET();
-	}else if(pGPIOx == GPIOE){
-		GPIOE_REG_RESET();
-	}else if(pGPIOx == GPIOF){
-		GPIOF_REG_RESET();
-	}else if(pGPIOx == GPIOG){
-		GPIOG_REG_RESET();
-	}else if(pGPIOx == GPIOH){
-		GPIOH_REG_RESET();
-	}else if(pGPIOx == GPIOI){
-		GPIOI_REG_RESET();
+	if(pGPIOx == GPIOA)
+	{
+		pRCC->AHB1RSTR |= (1 << RCC_AHB1RSTR_GPIOARST);
+		pRCC->AHB1RSTR &= ~(1 << RCC_AHB1RSTR_GPIOARST);
+	}else if(pGPIOx == GPIOB)
+	{
+		pRCC->AHB1RSTR |= (1 << RCC_AHB1RSTR_GPIOBRST);
+		pRCC->AHB1RSTR &= ~(1 << RCC_AHB1RSTR_GPIOBRST);
+	}else if(pGPIOx == GPIOC)
+	{
+		pRCC->AHB1RSTR |= (1 << RCC_AHB1RSTR_GPIOCRST);
+		pRCC->AHB1RSTR &= ~(1 << RCC_AHB1RSTR_GPIOCRST);
+	}else if(pGPIOx == GPIOD)
+	{
+		pRCC->AHB1RSTR |= (1 << RCC_AHB1RSTR_GPIODRST);
+		pRCC->AHB1RSTR &= ~(1 << RCC_AHB1RSTR_GPIODRST);
+	}else if(pGPIOx == GPIOE)
+	{
+		pRCC->AHB1RSTR |= (1 << RCC_AHB1RSTR_GPIOERST);
+		pRCC->AHB1RSTR &= ~(1 << RCC_AHB1RSTR_GPIOERST);
+	}else if(pGPIOx == GPIOF)
+	{
+		pRCC->AHB1RSTR |= (1 << RCC_AHB1RSTR_GPIOFRST);
+		pRCC->AHB1RSTR &= ~(1 << RCC_AHB1RSTR_GPIOFRST);
+	}else if(pGPIOx == GPIOG)
+	{
+		pRCC->AHB1RSTR |= (1 << RCC_AHB1RSTR_GPIOGRST);
+		pRCC->AHB1RSTR &= ~(1 << RCC_AHB1RSTR_GPIOGRST);
+	}else if(pGPIOx == GPIOH)
+	{
+		pRCC->AHB1RSTR |= (1 << RCC_AHB1RSTR_GPIOHRST);
+		pRCC->AHB1RSTR &= ~(1 << RCC_AHB1RSTR_GPIOHRST);
+	}else if(pGPIOx == GPIOI)
+	{
+		pRCC->AHB1RSTR |= (1 << RCC_AHB1RSTR_GPIOIRST);
+		pRCC->AHB1RSTR &= ~(1 << RCC_AHB1RSTR_GPIOIRST);
 	}
 }
 
