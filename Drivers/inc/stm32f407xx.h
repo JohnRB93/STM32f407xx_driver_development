@@ -369,7 +369,7 @@ typedef struct
 #define SYSCFG_PCLK_EN()	(RCC->APB2ENR |= (1 << 14))
 
 //Clock Disable Macro for SYSCFG peripheral.
-#define SYSCFG_PCLK_DI()	(RCC->APB2ENR &= ~(1 << 14))*/
+#define SYSCFG_PCLK_DI()	(RCC->APB2ENR &= ~(1 << 14))
 
 
 //Returns port code for given GPIOx base address.

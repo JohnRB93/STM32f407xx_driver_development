@@ -202,11 +202,10 @@ uint32_t RCC_GetPLLOutputClock(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
 	uint32_t vcoClk, pllClkInput;
 	uint8_t pllP;
 
-	switch(rccConfig.RCC_ClockSource)
+	switch(rccConfig.RCC_PLL_Config.PLL_SRC)
 	{
 		case PLL_SRC_HSI: pllClkInput = _16MHZ; break;
 		case PLL_SRC_HSE: pllClkInput = rccConfig.RCC_HSE_Frequency; break;
-		default: pllClkInput = _16MHZ; break;
 	}
 
 	vcoClk = pllClkInput * (rccConfig.RCC_PLL_Config.PLL_N / rccConfig.RCC_PLL_Config.PLL_M);
@@ -241,20 +240,34 @@ void RCC_Enable(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
 {
 	if(rccConfig.RCC_ClockSource == RCC_SOURCE_HSI)
 	{
+		pRCC->CR |= (1 << RCC_CR_HSION);
 		pRCC->CR &= ~(1 << RCC_CR_HSEON);
 		pRCC->CR &= ~(1 << RCC_CR_PLLON);
-		pRCC->CR |= (1 << RCC_CR_HSION);
+
 	}else if(rccConfig.RCC_ClockSource == RCC_SOURCE_HSE)
 	{
+		pRCC->CR |= (1 << RCC_CR_HSEON);
 		pRCC->CR &= ~(1 << RCC_CR_HSION);
 		pRCC->CR &= ~(1 << RCC_CR_PLLON);
-		pRCC->CR |= (1 << RCC_CR_HSEON);
+
 	}else if(rccConfig.RCC_ClockSource == RCC_SOURCE_PLL)
-	{
-		pRCC->CR &= ~(1 << RCC_CR_HSION);
+	{	//TODO: Implement Flash Peripheral set up and refactor below code.
+		uint32_t *pFlashAcr = (uint32_t*)0x40023C00U;
+		*pFlashAcr |= (0x5 << 0);
+		*pFlashAcr |= (1 << 8);
+		*pFlashAcr |= (1 << 9);
+		*pFlashAcr |= (1 << 10);
+		while(! (((*pFlashAcr >> 0) & 0x5) == 0x5) );
+
+		pRCC->CFGR &= ~(1 << RCC_CFGR_SW1);
+		pRCC->CFGR |= (1 << RCC_CFGR_SW1);
 		pRCC->CR &= ~(1 << RCC_CR_HSEON);
 		pRCC->CR |= (1 << RCC_CR_PLLON);
+
+		while(RCC_GetSysClkSwStatus(pRCC) != 0x2);
 	}
+
+
 }
 
 

@@ -131,7 +131,7 @@ void ADC_ChannelSelection(ADC_RegDef_t *pADCx, uint8_t convGroup, uint8_t conver
 			pADCx->SQR3 |= ((*channels) << ADC_SQR3_SQ1);
 		}else if(conversions <= ADC_16_CONVERSIONS && conversions >= ADC_02_CONVERSIONS)
 		{//More than one conversion will be done.
-			pADCx->SQR1 |= ((conversions + 1) << ADC_SQR1_L);
+			pADCx->SQR1 |= ((conversions) << ADC_SQR1_L);
 			for(uint8_t i = 0; i < length; i++)
 			{
 				switch(i + 1)
@@ -288,42 +288,18 @@ void ADC_SelectEOCFlagTrigger(ADC_Handle_t *ADC_Handle)
 }
 
 /*
- * @fn			- ADC_StartSingleConv
+ * @fn			- ADC_StartConversion
  *
- * @brief		- This function handles the conversion of a single
- * 				  channel from either the regular group or the
- * 				  injected group. Converted data will be stored in
- * 				  the data register.
- *
- * @param[ADC_Handle_t*]	- Base address of the ADC Handle.
- * @param[uint8_t]			- REGULAR_GROUP or INJECTED_GROUP macros.
- *
- * @return		- None.
- *
- * @note		- None.
- */
-void ADC_StartSingleConv(ADC_Handle_t *ADC_Handle, uint8_t group)
-{
-	ADC_Handle->pADCx->CR2 &= ~(1 << ADC_CR2_CONT);
-	if(group == ADC_REGULAR_GROUP)
-	{//Single conversion of a channel from the regular group.
-		ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
-		ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_STRT);
-	}else
-	{//Single conversion of a channel from the injection group.
-		ADC_Handle->pADCx->CR2 |= (1 << ADC_CR2_JSWSTART);
-		ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_JSTRT);
-	}
-}
-
-/*
- * @fn			- ADC_StartContConv
- *
- * @brief		- This function handles the continuous conversion of
- * 				  a group of channels. This will only work with a
- * 				  group of regular channels.
+ * @brief		- This function starts ADC conversion according to the
+ * 				  configurations defined in the ADC_Config Structure.
+ * 				  Supported conversion modes are single, continuous,
+ * 				  and discontinuous modes.
  *
  * @param[ADC_RegDef_t*]	- Base address of the ADC register.
+ * @param[uint8_t]			- Regular group or Injected group ex.
+ * 							  (ADC_REGULAR_GROUP, ADC_INJECTED_GROUP).
+ * @param[uint8_t]			- Conversion Mode. ex.(ADC_SINL_CONV_MODE,
+ * 							  ADC_CONT_CONV_MODE, ADC_DISCONT_CONV_MODE).
  *
  * @return		- None.
  *
@@ -331,11 +307,29 @@ void ADC_StartSingleConv(ADC_Handle_t *ADC_Handle, uint8_t group)
  * 				  only exception is when an injected channel is configured
  * 				  to be converted automatically after regular channels in
  * 				  continuous mode (using JAUTO bit).
+ * 				  ** Discontinous Conversion not yet implemented. **
  */
-void ADC_StartContConv(ADC_RegDef_t *pADCx)
-{
-	pADCx->CR2 |= (1 << ADC_CR2_CONT);
-	pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
+void ADC_StartConversion(ADC_RegDef_t *pADCx, uint8_t group, uint8_t conversionMode)
+{//TODO: Implement Discontinous Mode.
+	if(group == ADC_REGULAR_GROUP)
+	{//Regular Group will be converted.
+		if(conversionMode == ADC_SINL_CONV_MODE)
+		{//Single Conversion Mode.
+			pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
+			pADCx->SR &= ~(1 << ADC_SR_STRT);
+		}else if(conversionMode == ADC_CONT_CONV_MODE)
+		{//Continuous Conversion Mode.
+			pADCx->CR2 |= (1 << ADC_CR2_CONT);
+			pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
+		}
+	}else
+	{//Injected Group will be converted.
+		if(conversionMode == ADC_SINL_CONV_MODE)
+		{//Single Conversion Mode.
+			pADCx->CR2 |= (1 << ADC_CR2_JSWSTART);
+			pADCx->SR &= ~(1 << ADC_SR_JSTRT);
+		}
+	}
 }
 
 /*

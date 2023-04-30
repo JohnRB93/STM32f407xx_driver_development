@@ -11,8 +11,7 @@ typedef struct
 	uint8_t ADC_BitRes;				//@BitResolution
 	uint8_t ADC_SampTime;			//@SamplingTime
 	uint8_t ADC_EOCSelect;			//@EOC_Selection
-	uint8_t ADC_ConvMode;			//@ConversionModes
-	uint8_t ADC_ConvGroup;			//@
+	uint8_t ADC_ConvGroup;			//@ConversionGroups
 	uint8_t ADC_DataAlign;			//@DataAlignment
 	uint8_t ADC_ScanMode;			//ENABLE or DISABLE
 	uint8_t ADC_ClkPreSclr;			//@ClockPreScaler
@@ -54,24 +53,19 @@ typedef struct
 #define ADC_END_OF_SEQ				0		/*End of each sequence of conversions.*/
 #define ADC_END_OF_EACH				1		/*End of conversion.*/
 
-//@ConversionModes
-#define ADC_SINL_CONV_MODE			0
-#define ADC_CONT_CONV_MODE			1
-#define ADC_DISCONT_CONV_MODE		2
-
 //@ConversionGroups
-#define ADC_REGULAR_GROUP		0
-#define ADC_INJECTED_GROUP		1
+#define ADC_REGULAR_GROUP			0
+#define ADC_INJECTED_GROUP			1
 
 //@DataAlignment
 #define ADC_DATA_ALIGNMENT_RIGHT	0
 #define ADC_DATA_ALIGNMENT_LEFT		1
 
 //@ClockPreScaler
-#define ADC_PCLK_DIV2			0
-#define ADC_PCLK_DIV4			1
-#define ADC_PCLK_DIV6			2
-#define ADC_PCLK_DIV8			3
+#define ADC_PCLK_DIV2				0
+#define ADC_PCLK_DIV4				1
+#define ADC_PCLK_DIV6				2
+#define ADC_PCLK_DIV8				3
 
 //@InterruptsEnable
 #define ADC_INTERRUPT_ENABLE		ENABLE
@@ -125,6 +119,11 @@ typedef struct
 #define ADC_15_CONVERSIONS		14
 #define ADC_16_CONVERSIONS		15
 
+//ConversionModes
+#define ADC_SINL_CONV_MODE			0
+#define ADC_CONT_CONV_MODE			1
+#define ADC_DISCONT_CONV_MODE		2
+
 //ADC Application Status  @ADC_State
 #define ADC_OK							0
 #define ADC_END_OF_CONVERSION_REG		1
@@ -149,8 +148,7 @@ void ADC_ChannelSelection(ADC_RegDef_t *pADCx, uint8_t convGroup, uint8_t conver
 void ADC_ConfigSampRate(ADC_RegDef_t *pADCx, uint8_t channel, uint8_t cycles);
 void ADC_SelectEOCFlagTrigger(ADC_Handle_t *ADC_Handle);
 
-void ADC_StartSingleConv(ADC_Handle_t *pADC_Handle, uint8_t group);
-void ADC_StartContConv(ADC_RegDef_t *pADCx);
+void ADC_StartConversion(ADC_RegDef_t *pADCx, uint8_t group, uint8_t conversionMode);
 
 uint16_t ADC_ReadRegDR(ADC_RegDef_t *pADCx);
 uint16_t ADC_ReadInjDR(ADC_RegDef_t *pADCx);

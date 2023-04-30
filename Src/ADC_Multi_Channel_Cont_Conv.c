@@ -1,9 +1,3 @@
-/**
- * This Application is NOT Finished.
- * The DMA seems to load the data from the ADC data register into the PodData
- * array, mixes up which element in the array to load it into.
- */
-
 /*******************************************************************************
  * This STM32F407xx application reads analog input from two potentiometers
  * (pins PA6 and PA7).
@@ -20,8 +14,8 @@
 #include <stdio.h>
 #include"stm32f407xx.h"
 
-#define POT_YELLOW_LED_VALUE	15U
-#define POT_RED_LED_VALUE		245U
+#define POT_YELLOW_LED_VALUE	30U
+#define POT_RED_LED_VALUE		490U
 
 /*
  * PA6 -> ADC_IN6  potentiometer1
@@ -40,7 +34,6 @@ void GPIO_Config(void);
 void ADC_Config(void);
 void DMA_Config(void);
 void handleLeds(void);
-void delay(void);
 
 
 int main(void)
@@ -50,9 +43,9 @@ int main(void)
 	ADC_Config();
 	DMA_Config();
 
-	DMA_ConfigInterrupts(&dma, REQ_STREAM_0);
-	DMA_ActivateStream(dma.pDMAx, REQ_STREAM_0);
-	ADC_StartContConv(ADC_IN.pADCx);
+	DMA_ConfigInterrupts(&dma, REQ_STREAM_2);
+	DMA_ActivateStream(dma.pDMAx, REQ_STREAM_2);
+	ADC_StartConversion(ADC_IN.pADCx, ADC_REGULAR_GROUP, ADC_CONT_CONV_MODE);
 
 	while(1); //Hang and let the ADC continuously convert.
 }
@@ -60,7 +53,6 @@ int main(void)
 
 void RCC_Setup(void)
 {
-	/*Setup RCC Configurations*/
 	rcc.pRCC = RCC;
 	rcc.RCC_Config.RCC_ClockSource = RCC_SOURCE_PLL;
 	rcc.RCC_Config.RCC_PLL_Config.PLL_M = 8;// 16MHz / 8 => 2MHz
@@ -70,11 +62,9 @@ void RCC_Setup(void)
 	RCC_ConfigPLLReg(rcc.pRCC, rcc.RCC_Config.RCC_PLL_Config);
 	rcc.RCC_Config.RCC_AHB_Prescaler = 1;// 168MHz / 1 => 168MHz AHB1Bus
 	rcc.RCC_Config.RCC_APB_HSPrescaler = RCC_AHB_DIV_02;// 168MHz / 2 => 84MHz APB2Bus
-	rcc.RCC_Config.RCC_APB_LSPrescaler = RCC_AHB_DIV_08;// 168MHz / 8 => 21MHz APB1Bus
+	rcc.RCC_Config.RCC_APB_LSPrescaler = RCC_AHB_DIV_04;// 168MHz / 4 => 42MHz APB1Bus
 	RCC_Config(&rcc);
 	RCC_Enable(rcc.pRCC, rcc.RCC_Config);
-
-	while(RCC_GetSysClkSwStatus(rcc.pRCC) != 0);
 }
 
 void GPIO_Config(void)
@@ -86,7 +76,7 @@ void GPIO_Config(void)
 	GPIO_Init(&analogPin, rcc.pRCC);//Pot1Read
 
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_7;
-	GPIO_Init(&analogPin, rcc.pRCC);//Pot1Read
+	GPIO_Init(&analogPin, rcc.pRCC);//Pot2Read
 
 	ledPin.pGPIOx = GPIOB;
 	ledPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_OUT;
@@ -105,11 +95,11 @@ void GPIO_Config(void)
 
 void ADC_Config(void)
 {
-	ADC_IN.pADCx = ADC1;
+	ADC_IN.pADCx = ADC2;
 	ADC_IN.ADC_Config.ADC_BitRes = ADC_08BIT_RESOLUTION;
-	ADC_IN.ADC_Config.ADC_ClkPreSclr = ADC_PCLK_DIV8;/* 84Mz / 8 -> 10.5Mz */
-	ADC_IN.ADC_Config.ADC_ConvMode = ADC_CONT_CONV_MODE;
-	ADC_IN.ADC_Config.ADC_EOCSelect = ADC_END_OF_SEQ;
+	ADC_IN.ADC_Config.ADC_ClkPreSclr = ADC_PCLK_DIV4;/* 84Mz / 4 -> 21Mz */
+	ADC_IN.ADC_Config.ADC_ScanMode = ENABLE;
+	ADC_IN.ADC_Config.ADC_EOCSelect = ADC_END_OF_EACH;
 	ADC_IN.ADC_Config.ADC_DataAlign = ADC_DATA_ALIGNMENT_RIGHT;
 	ADC_IN.ADC_Config.ADC_WtDgEnable = ADC_WATCHDOG_DISABLE;
 	ADC_IN.ADC_Config.ADC_DMAEnable = ADC_DMA_ENABLE;
@@ -139,18 +129,12 @@ void DMA_Config(void)
 	dma.DMA_Config.DMA_SxNDTR = 2;
 	dma.DMA_Config.DMA_ItEnable.DMA_DMEIE = ENABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_FEIE = DISABLE;
-	dma.DMA_Config.DMA_ItEnable.DMA_HTIE = ENABLE;
+	dma.DMA_Config.DMA_ItEnable.DMA_HTIE = DISABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_TCIE = ENABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_TEIE = ENABLE;
 	DMA_Init(&dma, rcc.pRCC);
-	DMA_ConfigStream(&dma, REQ_STREAM_0, (uint32_t)(ADC1_BASEADDR + 0x4C), (uint32_t)(PotData), REQ_STR_CH_0);
-	DMA_IRQInterruptConfig(IRQ_NO_DMA2_STREAM0, ENABLE);
-}
-
-
-void delay(void)
-{
-	for(uint32_t i = 0; i < 500000/2; i++);
+	DMA_ConfigStream(&dma, REQ_STREAM_2, (uint32_t)&ADC_IN.pADCx->DR, (uint32_t)(PotData), REQ_STR_CH_1);
+	DMA_IRQInterruptConfig(IRQ_NO_DMA2_STREAM2, ENABLE);
 }
 
 
@@ -164,10 +148,19 @@ void DMA2_Stream0_IRQHandler(void)
 	DMA2_Stream0_IRQHandling(&dma);
 }
 
+void DMA2_Stream2_IRQHandler(void)
+{
+	DMA2_Stream2_IRQHandling(&dma);
+}
+
 
 void ADC_ApplicationEventCallback(ADC_Handle_t *pADCHandle, uint8_t AppEv)
 {
 	if(AppEv == ADC_END_OF_CONVERSION_REG)
+	{
+		pADCHandle->ADC_status = ADC_OK;
+	}
+	if(AppEv == ADC_OVERRUN_SET)
 	{
 		pADCHandle->ADC_status = ADC_OK;
 	}
@@ -197,20 +190,22 @@ void DMA_ApplicationEventCallback(DMA_Handle_t *pDMAHandle, uint8_t AppEv, uint8
 	pDMAHandle->DMA_status = DMA_OK;
 }
 
+
 void handleLeds(void)
 {
-	if(PotData[0] >= POT_RED_LED_VALUE)
+	uint16_t dataTotal = PotData[0] + PotData[1];
+	if(dataTotal >= POT_RED_LED_VALUE)
 	{//Turn on red led.
 		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_13, 1);
 		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_14, 0);
 		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_15, 0);
 	}
-	else if(PotData[0] >= POT_YELLOW_LED_VALUE && PotData[0] < POT_RED_LED_VALUE)
+	else if(dataTotal >= POT_YELLOW_LED_VALUE && dataTotal < POT_RED_LED_VALUE)
 	{//Turn on yellow led.
 		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_13, 0);
 		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_14, 1);
 		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_15, 0);
-	}else if(PotData[0] < POT_YELLOW_LED_VALUE)
+	}else if(dataTotal < POT_YELLOW_LED_VALUE)
 	{//Turn on green led.
 		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_13, 0);
 		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_14, 0);
