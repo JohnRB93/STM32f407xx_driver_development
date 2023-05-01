@@ -385,6 +385,23 @@ void DMA_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority)
 	*(NVIC_PR_BASEADDR + iprx) |= (IRQPriority << shift_amount);
 }
 
+
+/*
+ * @fn			- DMAx_Streamx_IRQHandling
+ *
+ * @brief		- Each IRQHandling function can be called by
+ * 				  the according DMAx Streamx. These functions
+ * 				  determines which interrupt was triggered
+ * 				  and handles it accordingly.
+ *
+ * @param[DMA_Handle_t*]	- Base address of the DMA Handle.
+ *
+ * @return		- None.
+ *
+ * @note		- This applies to all DMAx_Streamx_IRQHandling
+ * 				  functions.
+ */
+
 void DMA1_Stream0_IRQHandling(DMA_Handle_t *DMA_Handle)
 {
 	//Check for FIFO Error Interrupt.
@@ -837,13 +854,42 @@ void DMA2_Stream7_IRQHandling(DMA_Handle_t *DMA_Handle)
 
 
 /***************** Private Helper Function Definitions *********************************/
-//TODO: Add documentation to private function definitions.
 
+/*
+ * @fn			- DMA_ConfigPeripheralAddress
+ *
+ * @brief		- This function sets the address of the
+ * 				  peripheral register.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ * @param[uint32_t]			- Address of the peripheral register.
+ * 							  ex.((uint32_t)&pADC->DR)
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_ConfigPeripheralAddress(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint32_t periAddress)
 {
 	pDMAx->DMA_Sx[reqStream].SxPAR = periAddress;
 }
 
+/*
+ * @fn			- DMA_ConfigMemoryAddresses
+ *
+ * @brief		- This function sets the address of the
+ * 				  memory location.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ * @param[uint32_t]			- Address of the memory location.
+ * 							  ex.((uint32_t)&data)
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_ConfigMemoryAddresses(DMA_Handle_t *DMA_Handle, uint8_t reqStream, uint32_t memAddress)
 {
 	if(DMA_Handle->DMA_Config.DMA_TransactionType == DMA_DOUBLE_BUFFER_TRANSACTION)
@@ -854,11 +900,41 @@ static void DMA_ConfigMemoryAddresses(DMA_Handle_t *DMA_Handle, uint8_t reqStrea
 		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxM0AR = memAddress;
 }
 
+/*
+ * @fn			- DMA_ConfigItemsToTransfer
+ *
+ * @brief		- This function sets the number of items to
+ * 				  transfer.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ * @param[uint8_t]			- Number of items to transfer.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function. If circular mode is
+ * 				  enabled, this number automatically resets
+ * 				  once it reaches zero.
+ */
 static void DMA_ConfigItemsToTransfer(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t itemsToTransfer)
 {
 	pDMAx->DMA_Sx[reqStream].SxNDTR = itemsToTransfer;
 }
 
+/*
+ * @fn			- DMA_ConfigChannel
+ *
+ * @brief		- This function configures which channel of the
+ * 				  request stream will be used.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ * @param[uint8_t]			- Request Stream Channel.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_ConfigChannel(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t channel)
 {
 	if(channel == ADC_IN0)
@@ -867,11 +943,40 @@ static void DMA_ConfigChannel(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t ch
 		pDMAx->DMA_Sx[reqStream].SxCR |= (channel << DMA_SXCR_CHSEL);
 }
 
+/*
+ * @fn			- DMA_ConfigStreamPriority
+ *
+ * @brief		- This function configures the arbiter
+ * 				  priority value for the given DMA stream.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ * @param[uint8_t]			- Request Stream Priority Value.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_ConfigStreamPriority(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t priority)
 {
 	pDMAx->DMA_Sx[reqStream].SxCR |= (priority << DMA_SXCR_PL);
 }
 
+/*
+ * @fn			- DMA_ConfigFIFO
+ *
+ * @brief		- This function configures the use of fifo mode.
+ * 				  If fifo mode is used, the fifo threshold is
+ * 				  also configured.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ * @param[uint8_t]			- ENABLE or DISABLE.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_ConfigFIFO(DMA_Handle_t *DMA_Handle, uint8_t reqStream, uint8_t EnOrDi)
 {
 	if(EnOrDi == ENABLE)
@@ -885,6 +990,23 @@ static void DMA_ConfigFIFO(DMA_Handle_t *DMA_Handle, uint8_t reqStream, uint8_t 
 		DMA_Handle->pDMAx->DMA_Sx[reqStream].SxFCR &= ~(1 << DMA_SXFCR_DMDIS);
 }
 
+/*
+ * @fn			- DMA_ConfigTransDirection
+ *
+ * @brief		- This function configures the direction of
+ * 				  DMA transfer stream.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ * @param[uint8_t]			- Direction of the DMA stream.
+ * 							  (DMA_PERIPHERAL_TO_MEMORY,
+ * 							  DMA_MEMORY_TO_PERIPHERAL,
+ * 							  DMA_MEMORY_TO_MEMORY)
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_ConfigTransDirection(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t dir)
 {
 	if(dir == DMA_PERIPHERAL_TO_MEMORY)
@@ -893,6 +1015,24 @@ static void DMA_ConfigTransDirection(DMA_RegDef_t *pDMAx, uint8_t reqStream, uin
 		pDMAx->DMA_Sx[reqStream].SxCR |= (dir << DMA_SXCR_DIR);
 }
 
+/*
+ * @fn			- DMA_ConfigPtrIncrement
+ *
+ * @brief		- This function configures which address
+ * 				  pointer(s) will be automatically incremented
+ * 				  after each transfer.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ * @param[uint8_t]			- Increment Mode. (DMA_FIXED_MODE,
+ * 							  DMA_MEM_INC_MODE_ENABLE,
+ * 							  DMA_PER_INC_MODE_ENABLE,
+ * 							  DMA_MEM_PERI_INC_MODE_EN)
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_ConfigPtrIncrement(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t incMode)
 {
 	if(incMode == DMA_MEM_INC_MODE_ENABLE)
@@ -914,6 +1054,23 @@ static void DMA_ConfigPtrIncrement(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8
 	}
 }
 
+/*
+ * @fn			- DMA_ConfigBurstTransType
+ *
+ * @brief		- This function configures the burst
+ * 				  configuration.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ * @param[uint8_t]			- Memory Burst Type.
+ * 							  (DMA_INCR4, ... DMA_INCR16)
+ * @param[uint8_t]			- Peripheral Burst Type.
+ * 							  (DMA_INCR4, ... DMA_INCR16)
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_ConfigBurstTransType(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t memType, uint8_t periType)
 {
 	if((memType <= DMA_INCR16 && memType >= DMA_INCR4) &&
@@ -928,6 +1085,23 @@ static void DMA_ConfigBurstTransType(DMA_RegDef_t *pDMAx, uint8_t reqStream, uin
 	}
 }
 
+/*
+ * @fn			- DMA_ConfigDataWidths
+ *
+ * @brief		- This function configures the data widths
+ * 				  for each address.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ * @param[uint8_t]			- Memory Data Size.
+ * 							  (DMA_BYTE, DMA_HALF_WORD, DMA_WORD)
+ * @param[uint8_t]			- Peripheral Data Size.
+ * 							  (DMA_BYTE, DMA_HALF_WORD, DMA_WORD)
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_ConfigDataWidths(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t msize, uint8_t psize)
 {
 	if((msize == DMA_WORD || msize == DMA_HALF_WORD) &&
@@ -942,6 +1116,19 @@ static void DMA_ConfigDataWidths(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t
 	}
 }
 
+/*
+ * @fn			- DMA_ConfigCircularMode
+ *
+ * @brief		- This function configures the use of circular mode.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ * @param[uint8_t]			- ENABLE or DISABLE
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_ConfigCircularMode(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t EnOrDi)
 {
 	if(EnOrDi == ENABLE)
@@ -950,6 +1137,20 @@ static void DMA_ConfigCircularMode(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8
 		pDMAx->DMA_Sx[reqStream].SxCR &= ~(1 << DMA_SXCR_CIRC);//Disable Circular Mode
 }
 
+/*
+ * @fn			- DMA_ConfigDoubleBuffMode
+ *
+ * @brief		- This function configures the use of double
+ * 				  buffer mode.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ * @param[uint8_t]			- ENABLE or DISABLE
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_ConfigDoubleBuffMode(DMA_RegDef_t *pDMAx, uint8_t reqStream, uint8_t EnOrDi)
 {
 	if(EnOrDi == ENABLE)
@@ -959,7 +1160,23 @@ static void DMA_ConfigDoubleBuffMode(DMA_RegDef_t *pDMAx, uint8_t reqStream, uin
 }
 
 
+/*** Interrupt Helper Function Definitions ****/
 
+/*
+ * @fn			- DMA_HandleHalfTransCmptIt
+ *
+ * @brief		- This function handles the Half Transfer
+ * 				  Complete interrupt by setting the CHTIFx
+ * 				  bit in the xIFCR register for the appropriate
+ * 				  stream number.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_HandleHalfTransCmptIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 {
 	switch(reqStream)
@@ -977,6 +1194,21 @@ static void DMA_HandleHalfTransCmptIt(DMA_Handle_t *DMA_Handle, uint8_t reqStrea
 	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
 }
 
+/*
+ * @fn			- DMA_HandleTransCmptIt
+ *
+ * @brief		- This function handles the Transfer
+ * 				  Complete interrupt by setting the CTCIFx
+ * 				  bit in the xIFCR register for the appropriate
+ * 				  stream number.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_HandleTransCmptIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 {
 	switch(reqStream)
@@ -994,6 +1226,21 @@ static void DMA_HandleTransCmptIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
 }
 
+/*
+ * @fn			- DMA_HandleTransErrIt
+ *
+ * @brief		- This function handles the Transfer
+ * 				  Error interrupt by setting the CTEIFx
+ * 				  bit in the xIFCR register for the
+ * 				  appropriate stream number.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_HandleTransErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 {
 	switch(reqStream)
@@ -1011,6 +1258,21 @@ static void DMA_HandleTransErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
 }
 
+/*
+ * @fn			- DMA_HandleFIFOErrIt
+ *
+ * @brief		- This function handles the FIFO
+ * 				  Error interrupt by setting the CFEIFx
+ * 				  bit in the xIFCR register for the
+ * 				  appropriate stream number.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_HandleFIFOErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 {
 	switch(reqStream)
@@ -1028,6 +1290,21 @@ static void DMA_HandleFIFOErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
 }
 
+/*
+ * @fn			- DMA_HandleDirectErrIt
+ *
+ * @brief		- This function handles the Direct Mode
+ * 				  Error interrupt by setting the CDMEIFx
+ * 				  bit in the xIFCR register for the
+ * 				  appropriate stream number.
+ *
+ * @param[DMA_RegDef_t*]	- Base address of the DMA Register.
+ * @param[uint8_t]			- Request Stream Number.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void DMA_HandleDirectErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 {
 	switch(reqStream)
