@@ -20,11 +20,14 @@
 #define RG ADC_REGULAR_GROUP
 #define IG ADC_INJECTED_GROUP
 
+RCC_Handle_t rcc;
 ADC_Handle_t ADC_IN;
 GPIO_Handle_t analogPin, ledPin;
 
 uint16_t data;
+uint8_t channel = ADC_IN6;
 
+void RCC_setup(void);
 void GPIO_Config(void);
 void ADC_Config(void);
 void delay(void);
@@ -32,25 +35,18 @@ void delay(void);
 
 int main(void)
 {
+	RCC_setup();
 	GPIO_Config();
-
 	ADC_Config();
-	ADC_Init(&ADC_IN);
-
-	uint8_t channel = ADC_IN6;
 
 	while(1)
 	{
+		ADC_StartConversion(ADC_IN.pADCx, ADC_IN.ADC_Config.ADC_ConvGroup, ADC_SINL_CONV_MODE);
 #ifdef RG
-		ADC_ChannelSelection(ADC_IN.pADCx, RG, ADC_01_CONVERSIONS, &channel, 1);
-		ADC_StartSingleConv(&ADC_IN, RG);
 		data = (((255.0/4094)*ADC_ReadRegDR(ADC_IN.pADCx))-(255.0/4094));
 #else
-		ADC_ChannelSelection(ADC_IN.pADCx, IG, ADC_01_CONVERSIONS, &channel, 1);
-		ADC_StartSingleConv(&ADC_IN, IG);
 		data = (((255.0/4094)*ADC_ReadInjDR(ADC_IN.pADCx))-(255.0/4094));
 #endif
-		data = (((255.0/4094)*ADC_ReadRegDR(ADC_IN.pADCx))-(255.0/4094));
 		printf("Data = %d\n", data);
 		if(data >= 245)
 		{
@@ -75,13 +71,24 @@ int main(void)
 }
 
 
+void RCC_setup(void)
+{
+	rcc.pRCC = RCC;
+	rcc.RCC_Config.RCC_ClockSource = RCC_SOURCE_HSI;
+	rcc.RCC_Config.RCC_AHB_Prescaler = 1;
+	rcc.RCC_Config.RCC_APB_HSPrescaler = 1;
+	rcc.RCC_Config.RCC_APB_LSPrescaler = 1;
+	RCC_Config(&rcc);
+	RCC_Enable(rcc.pRCC, rcc.RCC_Config);
+}
+
 void GPIO_Config(void)
 {
 	analogPin.pGPIOx = GPIOA;
 	analogPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_ANALOG;
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_6;
 	analogPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
-	GPIO_Init(&analogPin);
+	GPIO_Init(&analogPin, rcc.pRCC);
 
 	ledPin.pGPIOx = GPIOB;
 	ledPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_OUT;
@@ -89,22 +96,30 @@ void GPIO_Config(void)
 	ledPin.GPIO_PinConfig.GPIO_PinOPType = GPIO_OP_TYPE_PP;
 	ledPin.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
 	ledPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
-	GPIO_Init(&ledPin);
+	GPIO_Init(&ledPin, rcc.pRCC);
 
 	ledPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_14;
-	GPIO_Init(&ledPin);
+	GPIO_Init(&ledPin, rcc.pRCC);
 
 	ledPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_15;
-	GPIO_Init(&ledPin);
+	GPIO_Init(&ledPin, rcc.pRCC);
 }
 
 void ADC_Config(void)
 {
 	ADC_IN.pADCx = ADC1;
 	ADC_IN.ADC_Config.ADC_BitRes = ADC_12BIT_RESOLUTION;
+	ADC_IN.ADC_Config.ADC_SampTime = ADC_003_CYCLES;
+	ADC_IN.ADC_Config.ADC_EOCSelect = ADC_END_OF_EACH;
 	ADC_IN.ADC_Config.ADC_ClkPreSclr = ADC_PCLK_DIV2;
-	ADC_IN.ADC_Config.ADC_ConvMode = ADC_SINL_CONV_MODE;
+	ADC_IN.ADC_Config.ADC_ConvGroup = RG;/*If RG is not defined, ConvGroup will need to be IG.*/
 	ADC_IN.ADC_Config.ADC_DataAlign = ADC_DATA_ALIGNMENT_RIGHT;
+	ADC_IN.ADC_Config.ADC_ItEnable = ADC_INTERRUPT_DISABLE;
+	ADC_IN.ADC_Config.ADC_DMAEnable = ADC_DMA_DISABLE;
+	ADC_IN.ADC_Config.ADC_WtDgEnable = ADC_WATCHDOG_DISABLE;
+	ADC_Init(&ADC_IN, rcc.pRCC);
+	ADC_ChannelSelection(ADC_IN.pADCx, ADC_IN.ADC_Config.ADC_ConvGroup, ADC_01_CONVERSIONS, &channel, 1);
+	ADC_ConfigSampRate(ADC_IN.pADCx, channel, ADC_IN.ADC_Config.ADC_SampTime);
 }
 
 void delay(void)

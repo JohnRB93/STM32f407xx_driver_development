@@ -149,6 +149,7 @@ void ADC_ConfigSampRate(ADC_RegDef_t *pADCx, uint8_t channel, uint8_t cycles);
 void ADC_SelectEOCFlagTrigger(ADC_Handle_t *ADC_Handle);
 
 void ADC_StartConversion(ADC_RegDef_t *pADCx, uint8_t group, uint8_t conversionMode);
+void ADC_StopConversion(ADC_RegDef_t *pADCx);
 
 uint16_t ADC_ReadRegDR(ADC_RegDef_t *pADCx);
 uint16_t ADC_ReadInjDR(ADC_RegDef_t *pADCx);

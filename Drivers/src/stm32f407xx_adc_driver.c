@@ -2,7 +2,7 @@
 
 /***************** Private Helper Function Headers *************************************/
 
-static void ADC_ConverterSwitch(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
+static void ADC_EnableConverter(ADC_RegDef_t *pADCx);
 static void ADC_ConfigPreScaler(ADC_RegDef_t *pADCx, uint8_t prescaler);
 static void ADC_ConfigBitRes(ADC_RegDef_t *pADCx, uint8_t resolution);
 static void ADC_ConfigDataAlign(ADC_RegDef_t *pADCx, uint8_t dataAlign);
@@ -36,7 +36,7 @@ static void ADC_HandleOVRIt(ADC_Handle_t *ADC_Handle);
 void ADC_Init(ADC_Handle_t *pADC_Handle, RCC_RegDef_t *pRCC)
 {
 	ADC_PeriClockControl(pADC_Handle->pADCx, pRCC, ENABLE);
-	ADC_ConverterSwitch(pADC_Handle->pADCx, ENABLE);
+	ADC_EnableConverter(pADC_Handle->pADCx);
 	ADC_ConfigPreScaler(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_ClkPreSclr);
 	ADC_ConfigBitRes(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_BitRes);
 	ADC_ConfigDataAlign(pADC_Handle->pADCx, pADC_Handle->ADC_Config.ADC_DataAlign);
@@ -333,6 +333,26 @@ void ADC_StartConversion(ADC_RegDef_t *pADCx, uint8_t group, uint8_t conversionM
 }
 
 /*
+ * @fn			- ADC_StopConversion
+ *
+ * @brief		- This function stops the ADC conversion. If
+ * 				  continuous conversion is enabled, it is disabled.
+ *
+ * @param[ADC_RegDef_t*]	- Base address of the ADC register.
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void ADC_StopConversion(ADC_RegDef_t *pADCx)
+{
+	if(((pADCx->CR2 >> ADC_CR2_CONT) & 0x1) == SET)
+		pADCx->CR2 &= ~(1 << ADC_CR2_CONT);
+
+	pADCx->CR2 &= ~(1 << ADC_CR2_ADON);
+}
+
+/*
  * @fn			- ADC_ReadRegDR
  *
  * @brief		- This function reads the data register.
@@ -481,21 +501,37 @@ void ADC_IRQHandling(ADC_Handle_t *ADC_Handle)
 
 
 /***************** Private Helper Function Definitions *********************************/
-//TODO: Add better documentation to private function definitions.
 
-//Turns the ADC on or off.
-static void ADC_ConverterSwitch(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
-{
-	if(EnOrDi == ENABLE)
-	{	//Set the ADON bit, turning on the ADC.
-		pADCx->CR2 |= (1 << ADC_CR2_ADON);
-	}else
-	{	//Clear the ADON bit, turning off the ADC.
-		pADCx->CR2 &= ~(1 << ADC_CR2_ADON);
-	}
+/*
+ * @fn			- ADC_StartConverter
+ *
+ * @brief		- This function turns on the ADC Converter.
+ *
+ * @param[ADC_RegDef_t*]	- Base Address of the ADC Register.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
+static void ADC_EnableConverter(ADC_RegDef_t *pADCx)
+{//Set the ADON bit, turning on the ADC.
+	pADCx->CR2 |= (1 << ADC_CR2_ADON);
 }
 
-//Configures the prescaler value for the ADC peripheral.
+/*
+ * @fn			- ADC_ConfigPreScaler
+ *
+ * @brief		- This function configures the prescaler value for
+ * 				  the ADC peripheral.
+ *
+ * @param[ADC_RegDef_t*]	- Base Address of the ADC Register.
+ * @param[uint8_t]			- The prescaler value for the ADC peripheral
+ * 							  (ADC_PCLK_DIV2, ... ADC_PCLK_DIV8).
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void ADC_ConfigPreScaler(ADC_RegDef_t *pADCx, uint8_t prescaler)
 {
 	switch(prescaler)
@@ -508,13 +544,37 @@ static void ADC_ConfigPreScaler(ADC_RegDef_t *pADCx, uint8_t prescaler)
 	}
 }
 
-//Configures the bit resolution.
+/*
+ * @fn			- ADC_ConfigBitRes
+ *
+ * @brief		- This function configures the bit resolution.
+ *
+ * @param[ADC_RegDef_t*]	- Base Address of the ADC Register.
+ * @param[uint8_t]			- Bit Resulotion(ADC_12BIT_RESOLUTION, ...
+ * 							  ADC_06BIT_RESOLUTION).
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void ADC_ConfigBitRes(ADC_RegDef_t *pADCx, uint8_t resolution)
 {
 	pADCx->CR1 |= (resolution << ADC_CR1_RES);
 }
 
-//Configures the data alignment in the data register.
+/*
+ * @fn			- ADC_ConfigDataAlign
+ *
+ * @brief		- This function configures the data alignment in the data register.
+ *
+ * @param[ADC_RegDef_t*]	- Base Address of the ADC Register.
+ * @param[uint8_t]			- Data Alignment(ADC_DATA_ALIGNMENT_RIGHT, ...
+ * 							  ADC_DATA_ALIGNMENT_LEFT).
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void ADC_ConfigDataAlign(ADC_RegDef_t *pADCx, uint8_t dataAlign)
 {
 	if(dataAlign == ADC_DATA_ALIGNMENT_RIGHT)
@@ -523,7 +583,18 @@ static void ADC_ConfigDataAlign(ADC_RegDef_t *pADCx, uint8_t dataAlign)
 		pADCx->CR2 |= (1 << ADC_CR2_ALIGN); //Align to the left.
 }
 
-//Configures the use of scan mode.
+/*
+ * @fn			- ADC_ConfigScanMode
+ *
+ * @brief		- This function configures the use of scan mode.
+ *
+ * @param[ADC_RegDef_t*]	- Base Address of the ADC Register.
+ * @param[uint8_t]			- ENABLE or DISABLE
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void ADC_ConfigScanMode(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
 {
 	if(EnOrDi == ENABLE)
@@ -532,7 +603,18 @@ static void ADC_ConfigScanMode(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
 		pADCx->CR1 &= ~(1 << ADC_CR1_SCAN);//Scan Mode will not be used.
 }
 
-//Enables or disables the ADC watch dog feature.
+/*
+ * @fn			- ADC_ConfigWtDg
+ *
+ * @brief		- This function enables or disables the ADC watch dog feature.
+ *
+ * @param[ADC_RegDef_t*]	- Base Address of the ADC Register.
+ * @param[uint8_t]			- ENABLE or DISABLE
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void ADC_ConfigWtDg(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
 {
 	if(EnOrDi == ADC_WATCHDOG_ENABLE)
@@ -548,7 +630,18 @@ static void ADC_ConfigWtDg(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
 	}
 }
 
-//Enables or disables the ADC interrupts.
+/*
+ * @fn			- ADC_ConfigIt
+ *
+ * @brief		- This function enables or disables the ADC interrupts.
+ *
+ * @param[ADC_RegDef_t*]	- Base Address of the ADC Register.
+ * @param[uint8_t]			- ENABLE or DISABLE
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void ADC_ConfigIt(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
 {
 	if(EnOrDi == ADC_INTERRUPT_ENABLE)
@@ -564,7 +657,18 @@ static void ADC_ConfigIt(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
 	}
 }
 
-//Enables or disables the DMA.
+/*
+ * @fn			- ADC_ConfigDMA
+ *
+ * @brief		- This function enables or disables the DMA.
+ *
+ * @param[ADC_RegDef_t*]	- Base Address of the ADC Register.
+ * @param[uint8_t]			- ENABLE or DISABLE
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void ADC_ConfigDMA(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
 {
 	if(EnOrDi == ADC_DMA_ENABLE)
@@ -578,24 +682,72 @@ static void ADC_ConfigDMA(ADC_RegDef_t *pADCx, uint8_t EnOrDi)
 	}
 }
 
+/*
+ * @fn			- ADC_HandleAWDIt
+ *
+ * @brief		- This function handles the Analog Watchdog
+ * 				  Interrupt.
+ *
+ * @param[ADC_Handle_t*]	- Base Address of the ADC Handle.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void ADC_HandleAWDIt(ADC_Handle_t *ADC_Handle)
 {
 	ADC_Handle->ADC_status = ADC_WATCHDOG_SET;
 	ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_AWD);
 }
 
+/*
+ * @fn			- ADC_HandleEOCIt
+ *
+ * @brief		- This function handles the End of Conversion
+ * 				  Interrupt.
+ *
+ * @param[ADC_Handle_t*]	- Base Address of the ADC Handle.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void ADC_HandleEOCIt(ADC_Handle_t *ADC_Handle)
 {
 	ADC_Handle->ADC_status = ADC_END_OF_CONVERSION_REG;
 	ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_EOC);
 }
 
+/*
+ * @fn			- ADC_HandleJEOCIt
+ *
+ * @brief		- This function handles the Injection End of
+ * 				  Conversion Interrupt.
+ *
+ * @param[ADC_Handle_t*]	- Base Address of the ADC Handle.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void ADC_HandleJEOCIt(ADC_Handle_t *ADC_Handle)
 {
 	ADC_Handle->ADC_status = ADC_END_OF_CONVERSION_INJ;
 	ADC_Handle->pADCx->SR &= ~(1 << ADC_SR_JEOC);
 }
 
+/*
+ * @fn			- ADC_HandleOVRIt
+ *
+ * @brief		- This function handles the Overrun
+ * 				  Interrupt.
+ *
+ * @param[ADC_Handle_t*]	- Base Address of the ADC Handle.
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
 static void ADC_HandleOVRIt(ADC_Handle_t *ADC_Handle)
 {
 	ADC_Handle->ADC_status = ADC_OVERRUN_SET;

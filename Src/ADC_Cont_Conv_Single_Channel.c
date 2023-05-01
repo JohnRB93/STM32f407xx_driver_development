@@ -7,8 +7,8 @@
  * There are three led pins connected to the GPIO port B.
  * Green Led -> PB15, Yellow Led -> PB14, Red Led -> PB13.
  * If the value stored in the PotData variable is >= 245, then the red led is lit.
- * If the value stored in the PotData variable is >= 245, then the yellow led is lit.
- * If the value stored in the PotData variable is >= 245, then the green led is lit.
+ * If the value stored in the PotData variable is >= 15, then the yellow led is lit.
+ * If the value stored in the PotData variable is < 15, then the green led is lit.
  ******************************************************************************/
 
 #include <stdint.h>
@@ -34,7 +34,6 @@ void RCC_Setup(void);
 void GPIO_Config(void);
 void ADC_Config(void);
 void DMA_Config(void);
-void delay(void);
 
 
 int main(void)
@@ -46,7 +45,7 @@ int main(void)
 	ADC_ChannelSelection(ADC_IN.pADCx, ADC_REGULAR_GROUP, ADC_01_CONVERSIONS, channels, 1);
 	DMA_ConfigInterrupts(&dma, REQ_STREAM_0);
 	DMA_ActivateStream(dma.pDMAx, REQ_STREAM_0);
-	ADC_StartContConv(ADC_IN.pADCx);
+	ADC_StartConversion(ADC_IN.pADCx, ADC_REGULAR_GROUP, ADC_CONT_CONV_MODE);
 
 	while(1); //Hang and let the ADC continuously convert.
 }
@@ -54,7 +53,6 @@ int main(void)
 
 void RCC_Setup(void)
 {
-	/*Setup RCC Configurations*/
 	rcc.pRCC = RCC;
 	rcc.RCC_Config.RCC_ClockSource = RCC_SOURCE_HSI;
 	rcc.RCC_Config.RCC_AHB_Prescaler = 1;
@@ -130,12 +128,6 @@ void DMA_Config(void)
 }
 
 
-void delay(void)
-{
-	for(uint32_t i = 0; i < 500000/2; i++);
-}
-
-
 void ADC_IRQHandler(void)
 {
 	ADC_IRQHandling(&ADC_IN);
@@ -195,5 +187,4 @@ void DMA_ApplicationEventCallback(DMA_Handle_t *pDMAHandle, uint8_t AppEv, uint8
 	}
 
 	pDMAHandle->DMA_status = DMA_OK;
-	delay();
 }
