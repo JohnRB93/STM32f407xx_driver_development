@@ -21,17 +21,25 @@
 /* register and the rcc configuration structure. The RCC is now configured and ready to be used for enabling other    */
 /* peripherals.                                                                                                       */
 /*                                                                                                                    */
+/* (*) Embedded Flash Memory Interface (Flash)                                                                        */
+/* */
+/* (*) Power Controller (PWR)                                                                                         */
+/* */
 /* (*) General Port Input Output (GPIO)                                                                               */
 /* */
-/* (*) Serial Peripheral Interface (SPI)                                                                              */
+/* (*) Direct Memory Access (DMA)                                                                                     */
 /* */
-/* (*) Direct memory access (DMA)                                                                                     */
+/* (*) Interrupts and Events (NVIC) (EXTI)                                                                            */
 /* */
 /* (*) Analog to Digital Conversion (ADC)                                                                             */
 /* */
+/* (*) Digital to Analog Conversion (DAC)                                                                             */
+/* */
+/* (*) Serial Peripheral Interface (SPI)                                                                              */
+/* */
 /* (*) Inter-Intergrated Circuit Interface (I2C)                                                                      */
 /* */
-/* (*) Universal synchronous asynchronous receiver transmitter (USART)                                                */
+/* (*) Universal Synchronous Asynchronous Receiver Transmitter (USART)                                                */
 /* */
 
 /**********************************************************************************************************************/
@@ -396,45 +404,67 @@ typedef struct
 
 
 //IRQ(Interrupt Request) Numbers of STM32F407xx MCU.
-#define IRQ_NO_EXTI0		6
-#define IRQ_NO_EXTI1		7
-#define IRQ_NO_EXTI2		8
-#define IRQ_NO_EXTI3		9
-#define IRQ_NO_EXTI4		10
-#define IRQ_NO_EXTI9_5		23
-#define IRQ_NO_EXTI15_10	40
-#define IRQ_NO_SPI1			35
-#define IRQ_NO_SPI2			36
-#define IRQ_NO_SPI3			51
-#define IRQ_NO_I2C1_EV		31
-#define IRQ_NO_I2C1_ER		32
-#define IRQ_NO_I2C2_EV		33
-#define IRQ_NO_I2C2_ER		34
-#define IRQ_NO_I2C3_EV		72
-#define IRQ_NO_I2C3_ER		73
-#define IRQ_NO_USART1		37
-#define IRQ_NO_USART2		38
-#define IRQ_NO_USART3		39
-#define IRQ_NO_UART4		52
-#define IRQ_NO_UART5		53
-#define IRQ_NO_USART6		71
-#define IRQ_NO_ADC			18
-#define IRQ_NO_DMA1_STREAM0	11
-#define IRQ_NO_DMA1_STREAM1	12
-#define IRQ_NO_DMA1_STREAM2	13
-#define IRQ_NO_DMA1_STREAM3	14
-#define IRQ_NO_DMA1_STREAM4	15
-#define IRQ_NO_DMA1_STREAM5	16
-#define IRQ_NO_DMA1_STREAM6	17
-#define IRQ_NO_DMA1_STREAM7	47
-#define IRQ_NO_DMA2_STREAM0	56
-#define IRQ_NO_DMA2_STREAM1	57
-#define IRQ_NO_DMA2_STREAM2	58
-#define IRQ_NO_DMA2_STREAM3	59
-#define IRQ_NO_DMA2_STREAM4	60
-#define IRQ_NO_DMA2_STREAM5	68
-#define IRQ_NO_DMA2_STREAM6	69
-#define IRQ_NO_DMA2_STREAM7	70
+#define IRQ_NO_EXTI0				6		/*!<EXTI Line0 interrupt>*/
+#define IRQ_NO_EXTI1				7		/*!<EXTI Line1 interrupt>*/
+#define IRQ_NO_EXTI2				8		/*!<EXTI Line2 interrupt>*/
+#define IRQ_NO_EXTI3				9		/*!<EXTI Line3 interrupt>*/
+#define IRQ_NO_EXTI4				10		/*!<EXTI Line4 interrupt>*/
+#define IRQ_NO_EXTI9_5				23		/*!<EXTI Line[9:5] interrupts>*/
+#define IRQ_NO_EXTI15_10			40		/*!<EXTI Line[15:10] interrupts>*/
+#define IRQ_NO_TIM1_BRK_TIM9		24		/*!<TIM1 Break interrupt and TIM9 global
+												interrupt>*/
+#define IRQ_NO_TIM1_UP_TIM10		25		/*!<TIM1 Update interrupt and TIM10
+												global interrupt>*/
+#define IRQ_NO_TIM1_TRG_COM_TIM11	26		/*!<TIM1 Trigger and Commutation
+												interrupts and TIM11 global interrupt>*/
+#define IRQ_NO_TIM1_CC				27		/*!<TIM1 Capture Compare interrupt>*/
+#define IRQ_NO_TIM2					28		/*!<TIM2 global interrupt>*/
+#define IRQ_NO_TIM3					29		/*!<TIM3 global interrupt>*/
+#define IRQ_NO_TIM4					30		/*!<TIM4 global interrupt>*/
+#define IRQ_NO_TIM5					50		/*!<TIM5 global interrupt>*/
+#define IRQ_NO_TIM6_DAC				54		/*!<TIM6 global interrupt,
+												DAC1 and DAC2 underrun error interrupts>*/
+#define IRQ_NO_TIM7					55		/*!<TIM7 global interrupt>*/
+#define IRQ_NO_TIM8_BRK_TIM12		43		/*!<TIM8 Break interrupt and TIM12
+												global interrupt>*/
+#define IRQ_NO_TIM8_UP_TIM13		44		/*!<TIM8 Update interrupt and TIM13
+												global interrupt>*/
+#define IRQ_NO_TIM8_TRG_COM_TIM14	45		/*!<TIM8 Trigger and Commutation
+												interrupts and TIM14 global interrupt>*/
+#define IRQ_NO_TIM8_CC				46		/*!<TIM8 Capture Compare interrupt>*/
+#define IRQ_NO_RCC					5		/*!<RCC global interrupt>*/
+#define IRQ_NO_SPI1					35		/*!<SPI1 global interrupt>*/
+#define IRQ_NO_SPI2					36		/*!<SPI2 global interrupt>*/
+#define IRQ_NO_SPI3					51		/*!<SPI3 global interrupt>*/
+#define IRQ_NO_I2C1_EV				31		/*!<I2C1 event interrupt>*/
+#define IRQ_NO_I2C1_ER				32		/*!<I2C1 error interrupt>*/
+#define IRQ_NO_I2C2_EV				33		/*!<I2C2 event interrupt>*/
+#define IRQ_NO_I2C2_ER				34		/*!<I2C2 error interrupt>*/
+#define IRQ_NO_I2C3_EV				72		/*!<I2C3 event interrupt>*/
+#define IRQ_NO_I2C3_ER				73		/*!<I2C3 error interrupt>*/
+#define IRQ_NO_USART1				37		/*!<USART1 global interrupt>*/
+#define IRQ_NO_USART2				38		/*!<USART2 global interrupt>*/
+#define IRQ_NO_USART3				39		/*!<USART3 global interrupt>*/
+#define IRQ_NO_UART4				52		/*!<UART4 global interrupt>*/
+#define IRQ_NO_UART5				53		/*!<UART5 global interrupt>*/
+#define IRQ_NO_USART6				71		/*!<USART6 global interrupt>*/
+#define IRQ_NO_ADC					18		/*!<ADC1, ADC2 and ADC3 global interrupts>*/
+#define IRQ_NO_DMA1_STREAM0			11		/*!<DMA1 Stream0 global interrupt>*/
+#define IRQ_NO_DMA1_STREAM1			12		/*!<DMA1 Stream1 global interrupt>*/
+#define IRQ_NO_DMA1_STREAM2			13		/*!<DMA1 Stream2 global interrupt>*/
+#define IRQ_NO_DMA1_STREAM3			14		/*!<DMA1 Stream3 global interrupt>*/
+#define IRQ_NO_DMA1_STREAM4			15		/*!<DMA1 Stream4 global interrupt>*/
+#define IRQ_NO_DMA1_STREAM5			16		/*!<DMA1 Stream5 global interrupt>*/
+#define IRQ_NO_DMA1_STREAM6			17		/*!<DMA1 Stream6 global interrupt>*/
+#define IRQ_NO_DMA1_STREAM7			47		/*!<DMA1 Stream7 global interrupt>*/
+#define IRQ_NO_DMA2_STREAM0			56		/*!<DMA2 Stream0 global interrupt>*/
+#define IRQ_NO_DMA2_STREAM1			57		/*!<DMA2 Stream1 global interrupt>*/
+#define IRQ_NO_DMA2_STREAM2			58		/*!<DMA2 Stream2 global interrupt>*/
+#define IRQ_NO_DMA2_STREAM3			59		/*!<DMA2 Stream3 global interrupt>*/
+#define IRQ_NO_DMA2_STREAM4			60		/*!<DMA2 Stream4 global interrupt>*/
+#define IRQ_NO_DMA2_STREAM5			68		/*!<DMA2 Stream5 global interrupt>*/
+#define IRQ_NO_DMA2_STREAM6			69		/*!<DMA2 Stream6 global interrupt>*/
+#define IRQ_NO_DMA2_STREAM7			70		/*!<DMA2 Stream7 global interrupt>*/
 
 //IRQ Priority Levels of STM32F407xx MCU.
 #define NVIC_IRQ_PRIORITY0		0
@@ -1278,6 +1308,5 @@ typedef struct
 #include"stm32f407xx_rcc_driver.h"
 #include"stm32f407xx_adc_driver.h"
 #include"stm32f407xx_dma_driver.h"
-//#include"stm32f407xx_irq_handling.h"
 
 #endif /* INC_STM32F407XX_H_ */

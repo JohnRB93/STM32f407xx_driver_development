@@ -59,7 +59,8 @@ void ADC_Init(ADC_Handle_t *pADC_Handle, RCC_RegDef_t *pRCC)
  */
 void ADC_DeInit(RCC_RegDef_t *pRCC)
 {
-	pRCC->APB2RSTR |= (1 << RCC_APB2RSTR_ADCRST); pRCC->APB2RSTR &= ~(1 << RCC_APB2RSTR_ADCRST);
+	pRCC->APB2ENR |= (1 << RCC_APB2RSTR_ADCRST);
+	pRCC->APB2ENR &= ~(1 << RCC_APB2RSTR_ADCRST);
 }
 
 /*
@@ -199,6 +200,29 @@ void ADC_ChannelSelection(ADC_RegDef_t *pADCx, uint8_t convGroup, uint8_t conver
 }
 
 /*
+ * @fn			- ADC_SetDisContNumber
+ *
+ * @brief		- This function configures the number of conversions
+ * 				  that will take place for DisContinuous Conversion
+ * 				  Mode.
+ *
+ * @param[ADC_RegDef_t*]	- Base address of the ADC Register.
+ * @param[uint8_t]			- Number of conversions
+ * 							  (ADC_DISC_NUM_1, ... ADC_DISC_NUM_8).
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void ADC_SetDisContNumber(ADC_RegDef_t *pADCx, uint8_t n)
+{
+	if(n == ADC_DISC_NUM_1)
+		pADCx->CR1 &= ~(1 << ADC_CR1_DISCNUM);
+	else
+		pADCx->CR1 |= (1 << ADC_CR1_DISCNUM);
+}
+
+/*
  * @fn			- ADC_ConfigSampRate
  *
  * @brief		- This function configures the sample rate for the given
@@ -307,10 +331,9 @@ void ADC_SelectEOCFlagTrigger(ADC_Handle_t *ADC_Handle)
  * 				  only exception is when an injected channel is configured
  * 				  to be converted automatically after regular channels in
  * 				  continuous mode (using JAUTO bit).
- * 				  ** Discontinous Conversion not yet implemented. **
  */
 void ADC_StartConversion(ADC_RegDef_t *pADCx, uint8_t group, uint8_t conversionMode)
-{//TODO: Implement Discontinous Mode.
+{
 	if(group == ADC_REGULAR_GROUP)
 	{//Regular Group will be converted.
 		if(conversionMode == ADC_SINL_CONV_MODE)
@@ -321,7 +344,10 @@ void ADC_StartConversion(ADC_RegDef_t *pADCx, uint8_t group, uint8_t conversionM
 		{//Continuous Conversion Mode.
 			pADCx->CR2 |= (1 << ADC_CR2_CONT);
 			pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
-		}
+		}/*else if(conversionMode == ADC_DISCONT_CONV_MODE)
+		{//Discontinuous Conversion Mode.
+			pADCx->CR1 |= (1 << ADC_CR1_DISCEN);
+		}*/
 	}else
 	{//Injected Group will be converted.
 		if(conversionMode == ADC_SINL_CONV_MODE)
@@ -330,6 +356,23 @@ void ADC_StartConversion(ADC_RegDef_t *pADCx, uint8_t group, uint8_t conversionM
 			pADCx->SR &= ~(1 << ADC_SR_JSTRT);
 		}
 	}
+}
+
+/*
+ * @fn			- ADC_DisableContConversion
+ *
+ * @brief		- This function clears the CONT bit in the CR2
+ * 				  register, disabling continuous conversion mode.
+ *
+ * @param[ADC_RegDef_t*]	- Base address of the ADC register.
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void ADC_DisableContConversion(ADC_RegDef_t *pADCx)
+{
+	pADCx->CR2 &= ~(1 << ADC_CR2_CONT);
 }
 
 /*
@@ -347,7 +390,7 @@ void ADC_StartConversion(ADC_RegDef_t *pADCx, uint8_t group, uint8_t conversionM
 void ADC_StopConversion(ADC_RegDef_t *pADCx)
 {
 	if(((pADCx->CR2 >> ADC_CR2_CONT) & 0x1) == SET)
-		pADCx->CR2 &= ~(1 << ADC_CR2_CONT);
+		ADC_DisableContConversion(pADCx);
 
 	pADCx->CR2 &= ~(1 << ADC_CR2_ADON);
 }
@@ -384,6 +427,74 @@ uint16_t ADC_ReadRegDR(ADC_RegDef_t *pADCx)
 uint16_t ADC_ReadInjDR(ADC_RegDef_t *pADCx)
 {
 	return (uint16_t)pADCx->JDR1;
+}
+
+/*
+ * @fn			- ADC_ExtTrigDetect
+ *
+ * @brief		- This function configures the trigger detection for
+ * 				  falling edge, rising edge, both, or none.
+ *
+ * @param[ADC_RegDef_t*]	- Base address of the ADC register.
+ * @param[uint8_t]			- Conversion Group.
+ * 							  (ADC_REGULAR_GROUP, ADC_INJECTED_GROUP)
+ * @param[uint8_t]			- Trigger detection.
+ * 							  (ADC_DETECTION_DISABLED, ADC_RISING_EDGE,
+ * 							   ADC_FALLING_EDGE, ADC_RIS_FALL_EDGE)
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void ADC_ExtTrigDetect(ADC_RegDef_t *pADCx, uint8_t group, uint8_t detection)
+{
+	if(group == ADC_REGULAR_GROUP)
+	{//External trigger enable for regular channels.
+		if(detection == ADC_DETECTION_DISABLED)
+			pADCx->CR2 &= ~(0x3 << ADC_CR2_EXTEN);
+		else
+			pADCx->CR2 |= (detection << ADC_CR2_EXTEN);
+	}else
+	{//External trigger enable for injected channels.
+		if(detection == ADC_DETECTION_DISABLED)
+			pADCx->CR2 &= ~(0x3 << ADC_CR2_JEXTEN);
+		else
+			pADCx->CR2 |= (detection << ADC_CR2_JEXTEN);
+	}
+}
+
+/*
+ * @fn			- ADC_SelectExtEvReg
+ *
+ * @brief		- This function configures the selection of which
+ * 				  external events will be used to generate external
+ * 				  interrupts.
+ *
+ * @param[ADC_RegDef_t*]	- Base address of the ADC register.
+ * @param[uint8_t]			- Conversion Group.
+ * 							  (ADC_REGULAR_GROUP, ADC_INJECTED_GROUP)
+ * @param[uint8_t]			- External event.
+ * 							  (ADC_TIM1_CC1_EVENT, ... ADC_EXTI_LINE_15)
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void ADC_SelectExtEvReg(ADC_RegDef_t *pADCx, uint8_t group, uint8_t event)
+{
+	if(group == ADC_REGULAR_GROUP)
+	{//External event selection for regular channels.
+		if(event == ADC_TIM1_CC1_EVENT)
+			pADCx->CR2 &= ~(15 << ADC_CR2_EXTSEL);
+		else
+			pADCx->CR2 |= (event << ADC_CR2_EXTSEL);
+	}else
+	{//External event selection for injected channels.
+		if(event == ADC_TIM1_CC4_EVENT)
+			pADCx->CR2 &= ~(15 << ADC_CR2_JEXTSEL);
+		else
+			pADCx->CR2 |= (event << ADC_CR2_JEXTSEL);
+	}
 }
 
 /*

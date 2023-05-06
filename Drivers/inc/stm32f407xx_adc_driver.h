@@ -124,6 +124,58 @@ typedef struct
 #define ADC_CONT_CONV_MODE			1
 #define ADC_DISCONT_CONV_MODE		2
 
+//Number of Discontinuous Conversions
+#define ADC_DISC_NUM_1			0
+#define ADC_DISC_NUM_2			1
+#define ADC_DISC_NUM_3			2
+#define ADC_DISC_NUM_4			3
+#define ADC_DISC_NUM_5			4
+#define ADC_DISC_NUM_6			5
+#define ADC_DISC_NUM_7			6
+#define ADC_DISC_NUM_8			7
+
+//External Event Trigger Detection for both regular and injected groups
+#define ADC_DETECTION_DISABLED		0
+#define ADC_RISING_EDGE				1
+#define ADC_FALLING_EDGE			2
+#define ADC_RIS_FALL_EDGE			3
+
+//External Event Selection for regular group
+#define ADC_TIM1_CC1_EVENT			0
+#define ADC_TIM1_CC2_EVENT			1
+#define ADC_TIM1_CC3_EVENT			2
+#define ADC_TIM2_CC2_EVENT			3
+#define ADC_TIM2_CC3_EVENT			4
+#define ADC_TIM2_CC4_EVENT			5
+#define ADC_TIM2_TRGO_REG_EVENT		6
+#define ADC_TIM3_CC1_EVENT			7
+#define ADC_TIM3_TRGO_EVENT			8
+#define ADC_TIM4_CC4_EVENT			9
+#define ADC_TIM5_CC1_EVENT			10
+#define ADC_TIM5_CC2_EVENT			11
+#define ADC_TIM5_CC3_EVENT			12
+#define ADC_TIM8_CC1_EVENT			13
+#define ADC_TIM8_TRGO_EVENT			14
+#define ADC_EXTI_LINE_11			15
+
+//External Event Selection for injected group
+#define ADC_TIM1_CC4_EVENT			0
+#define ADC_TIM1_TRGO_EVENT			1
+#define ADC_TIM2_CC1_EVENT			2
+#define ADC_TIM2_TRGO_INJ_EVENT		3
+#define ADC_TIM3_CC2_EVENT			4
+#define ADC_TIM3_CC4_EVENT			5
+#define ADC_TIM4_CC1_EVENT			6
+#define ADC_TIM4_CC2_EVENT			7
+#define ADC_TIM4_CC3_EVENT			8
+#define ADC_TIM4_TRGO_EVENT			9
+#define ADC_TIM5_CC4_EVENT			10
+#define ADC_TIM5_TRGO_EVENT			11
+#define ADC_TIM8_CC2_EVENT			12
+#define ADC_TIM8_CC3_EVENT			13
+#define ADC_TIM8_CC4_EVENT			14
+#define ADC_EXTI_LINE_15			15
+
 //ADC Application Status  @ADC_State
 #define ADC_OK							0
 #define ADC_END_OF_CONVERSION_REG		1
@@ -145,14 +197,19 @@ void ADC_Init(ADC_Handle_t *pADC_Handle, RCC_RegDef_t *pRCC);
 void ADC_DeInit(RCC_RegDef_t *pRCC);
 void ADC_PeriClockControl(ADC_RegDef_t *pADCx, RCC_RegDef_t *pRCC, uint8_t EnOrDi);
 void ADC_ChannelSelection(ADC_RegDef_t *pADCx, uint8_t convGroup, uint8_t conversions, uint8_t channels[], uint8_t length);
+void ADC_SetDisContNumber(ADC_RegDef_t *pADCx, uint8_t n);
 void ADC_ConfigSampRate(ADC_RegDef_t *pADCx, uint8_t channel, uint8_t cycles);
 void ADC_SelectEOCFlagTrigger(ADC_Handle_t *ADC_Handle);
 
 void ADC_StartConversion(ADC_RegDef_t *pADCx, uint8_t group, uint8_t conversionMode);
+void ADC_DisableContConversion(ADC_RegDef_t *pADCx);
 void ADC_StopConversion(ADC_RegDef_t *pADCx);
 
 uint16_t ADC_ReadRegDR(ADC_RegDef_t *pADCx);
 uint16_t ADC_ReadInjDR(ADC_RegDef_t *pADCx);
+
+void ADC_ExtTrigDetect(ADC_RegDef_t *pADCx, uint8_t group, uint8_t detection);
+void ADC_SelectExtEvReg(ADC_RegDef_t *pADCx, uint8_t group, uint8_t event);
 
 void ADC_SelectWatchDogChannel(ADC_RegDef_t *pADCx, uint8_t channel);
 

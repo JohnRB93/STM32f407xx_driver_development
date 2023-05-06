@@ -1,10 +1,12 @@
 /*******************************************************************************
- * This STM32F407xx application reads analog input from two potentiometers
- * (pins PA6 and PA7).
+ * This STM32F407xx application uses discontinuous conversion mode to read input
+ * from three channels (two potentiometers and one photoresistor).
+ * The conversion will take place whenever a push button connected to PC11 is
+ * pressed.
+ * EXTI Line 11 is used to generate an external interrupt whenever the push
+ * button is pressed.
  * DMA Streams and Interrupts are used in this application.
- * Circular mode is used for continuous scan mode conversion of regular
- * channels.
- * In this application, there are two channels to convert.
+ * Circular mode is used for scan mode conversion of regular channels.
  * If the calculated values from the analog conversions reaches a defined
  * amount, then a corresponding led connected to PB13, PB14, or PB15 will turn
  * on.
@@ -18,10 +20,11 @@
 #include <stdio.h>
 #include"stm32f407xx.h"
 
-#define POT_YELLOW_LED_VALUE	30U
-#define POT_RED_LED_VALUE		490U
+#define PHO_LED_VALUE 195U
+#define POT_LED_VALUE 245U
 
 /*
+ * PA5 -> ADC_IN5  photoresistor
  * PA6 -> ADC_IN6  potentiometer1
  * PA7 -> ADC_IN7  potentiometer2
  */
@@ -29,9 +32,9 @@
 RCC_Handle_t rcc;
 ADC_Handle_t ADC_IN;
 DMA_Handle_t dma;
-GPIO_Handle_t analogPin, ledPin;
-uint8_t channels[] = {ADC_IN6, ADC_IN7};
-uint8_t data[2];
+
+uint8_t channels[] = {ADC_IN5, ADC_IN6, ADC_IN7};
+uint8_t data[3];
 
 void RCC_Setup(void);
 void GPIO_Config(void);
@@ -47,11 +50,14 @@ int main(void)
 	ADC_Config();
 	DMA_Config();
 
+
+
 	DMA_ConfigInterrupts(&dma, REQ_STREAM_2);
 	DMA_ActivateStream(dma.pDMAx, REQ_STREAM_2);
-	ADC_StartConversion(ADC_IN.pADCx, ADC_REGULAR_GROUP, ADC_CONT_CONV_MODE);
 
-	while(1); //Hang and let the ADC continuously convert.
+	ADC_StartConversion(ADC_IN.pADCx, ADC_REGULAR_GROUP, ADC_DISCONT_CONV_MODE);
+
+	while(1);
 }
 
 
@@ -73,15 +79,22 @@ void RCC_Setup(void)
 
 void GPIO_Config(void)
 {
+	GPIO_Handle_t analogPin, ledPin, buttonPin;
+
+	//Analog Inputs
 	analogPin.pGPIOx = GPIOA;
 	analogPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_ANALOG;
 	analogPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_HIGH;
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_6;
-	GPIO_Init(&analogPin, rcc.pRCC);//Pot1Read
+	GPIO_Init(&analogPin, rcc.pRCC);//Potentiometor1 Input
 
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_7;
-	GPIO_Init(&analogPin, rcc.pRCC);//Pot2Read
+	GPIO_Init(&analogPin, rcc.pRCC);//Potentiometor2 Input
 
+	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_5;
+	GPIO_Init(&analogPin, rcc.pRCC);//Photoresistor Input
+
+	//LED Outputs
 	ledPin.pGPIOx = GPIOB;
 	ledPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_OUT;
 	ledPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_13;
@@ -95,6 +108,16 @@ void GPIO_Config(void)
 
 	ledPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_15;
 	GPIO_Init(&ledPin, rcc.pRCC);//GreenLedPin
+
+	//Button
+	buttonPin.pGPIOx = GPIOC;
+	buttonPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_11;
+	buttonPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_IT_FT;
+	buttonPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
+	buttonPin.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
+	GPIO_Init(&buttonPin, rcc.pRCC);
+	GPIO_IRQPriorityConfig(IRQ_NO_EXTI15_10, NVIC_IRQ_PRIORITY15);
+	GPIO_IRQInterruptConfig(IRQ_NO_EXTI15_10, ENABLE);
 }
 
 void ADC_Config(void)
@@ -109,11 +132,16 @@ void ADC_Config(void)
 	ADC_IN.ADC_Config.ADC_DMAEnable = ADC_DMA_ENABLE;
 	ADC_IN.ADC_Config.ADC_ItEnable = ADC_INTERRUPT_ENABLE;
 	ADC_Init(&ADC_IN, rcc.pRCC);
-	ADC_ChannelSelection(ADC_IN.pADCx, ADC_REGULAR_GROUP, ADC_02_CONVERSIONS, channels, 2);
+	ADC_ChannelSelection(ADC_IN.pADCx, ADC_REGULAR_GROUP, ADC_03_CONVERSIONS, channels, 3);
 	ADC_ConfigSampRate(ADC_IN.pADCx, channels[0], ADC_480_CYCLES);
 	ADC_ConfigSampRate(ADC_IN.pADCx, channels[1], ADC_480_CYCLES);
+	ADC_ConfigSampRate(ADC_IN.pADCx, channels[2], ADC_480_CYCLES);
+	ADC_SetDisContNumber(ADC_IN.pADCx, ADC_DISC_NUM_3);
 	ADC_SelectEOCFlagTrigger(&ADC_IN);
 	ADC_IRQInterruptConfig(IRQ_NO_ADC, ENABLE);
+
+	ADC_ExtTrigDetect(ADC_IN.pADCx, ADC_REGULAR_GROUP, ADC_FALLING_EDGE);
+	ADC_SelectExtEvReg(ADC_IN.pADCx, ADC_REGULAR_GROUP, ADC_EXTI_LINE_11);
 }
 
 void DMA_Config(void)
@@ -130,14 +158,14 @@ void DMA_Config(void)
 	dma.DMA_Config.DMA_PtrInc = DMA_MEM_INC_MODE_ENABLE;
 	dma.DMA_Config.DMA_MemBurstTransfer = DMA_SINGLE_TRANSFER;
 	dma.DMA_Config.DMA_PeriBurstTransfer = DMA_SINGLE_TRANSFER;
-	dma.DMA_Config.DMA_SxNDTR = 2;
+	dma.DMA_Config.DMA_SxNDTR = 3;
 	dma.DMA_Config.DMA_ItEnable.DMA_DMEIE = ENABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_FEIE = DISABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_HTIE = DISABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_TCIE = ENABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_TEIE = ENABLE;
 	DMA_Init(&dma, rcc.pRCC);
-	DMA_ConfigStream(&dma, REQ_STREAM_2, (uint32_t)&ADC_IN.pADCx->DR, (uint32_t)(PotData), REQ_STR_CH_1);
+	DMA_ConfigStream(&dma, REQ_STREAM_2, (uint32_t)&ADC_IN.pADCx->DR, (uint32_t)(data), REQ_STR_CH_1);
 	DMA_IRQInterruptConfig(IRQ_NO_DMA2_STREAM2, ENABLE);
 }
 
@@ -147,14 +175,14 @@ void ADC_IRQHandler(void)
 	ADC_IRQHandling(&ADC_IN);
 }
 
-void DMA2_Stream0_IRQHandler(void)
-{
-	DMA2_Stream0_IRQHandling(&dma);
-}
-
 void DMA2_Stream2_IRQHandler(void)
 {
 	DMA2_Stream2_IRQHandling(&dma);
+}
+
+void EXTI15_10_IRQHandler(void)
+{
+	GPIO_IRQHandling(GPIO_PIN_NO_11);
 }
 
 
@@ -197,22 +225,18 @@ void DMA_ApplicationEventCallback(DMA_Handle_t *pDMAHandle, uint8_t AppEv, uint8
 
 void handleLeds(void)
 {
-	uint16_t dataTotal = PotData[0] + PotData[1];
-	if(dataTotal >= POT_RED_LED_VALUE)
-	{//Turn on red led.
-		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_13, 1);
-		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_14, 0);
-		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_15, 0);
-	}
-	else if(dataTotal >= POT_YELLOW_LED_VALUE && dataTotal < POT_RED_LED_VALUE)
-	{//Turn on yellow led.
-		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_13, 0);
-		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_14, 1);
-		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_15, 0);
-	}else if(dataTotal < POT_YELLOW_LED_VALUE)
-	{//Turn on green led.
-		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_13, 0);
-		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_14, 0);
-		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_15, 1);
-	}
+	if(data[0] >= PHO_LED_VALUE)
+		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_13, 1);//Turn on red led.
+	else
+		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_13, 0);//Turn off red led.
+
+	if(data[1] >= POT_LED_VALUE)
+		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_14, 1);//Turn on yellow led.
+	else
+		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_14, 0);//Turn off yellow led.
+
+	if(data[2] >= POT_LED_VALUE)
+		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_15, 1);//Turn on green led.
+	else
+		GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_15, 0);//Turn off green led.
 }
