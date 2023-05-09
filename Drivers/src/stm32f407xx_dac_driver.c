@@ -30,7 +30,8 @@ static void DAC_EnableChannel(DAC_RegDef_t *pDAC, uint8_t chaEnOrDi);
  *
  * @return		- None.
  *
- * @note		- None.
+ * @note		- The GPIO pins that will be used(PA4 or PA5), should first
+ * 				  be configured to analog mode to avoid parasitic consumption.
  */
 void DAC_Init(DAC_Handle_t *pDAC_Handle, RCC_RegDef_t *pRCC)
 {
@@ -99,6 +100,82 @@ void DAC_PeriClockControl(DAC_RegDef_t *pDAC, RCC_RegDef_t *pRCC, uint8_t EnOrDi
 		pRCC->APB1ENR |= (1 << RCC_APB1ENR_DACEN);
 	else
 		pRCC->APB1ENR &= ~(1 << RCC_APB1ENR_DACEN);
+}
+
+/*
+ * @fn			- DAC_Load8BitDataRightAlign
+ *
+ * @brief		- This function loads 8 bits of right aligned
+ * 				  data to the corresponding data holding
+ * 				  register.
+ *
+ * @param[DAC_RegDef_t*]	- Base address of the DAC register.
+ * @param[uint8_t]			- DAC Channel.
+ * 							  @DAC_Channel
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void DAC_Load8BitDataRightAlign(DAC_RegDef_t *pDAC, uint8_t channel)
+{//TODO: Implement
+
+}
+
+/*
+ * @fn			- DAC_Load12BitDataLeftAlign
+ *
+ * @brief		- This function loads 12 bits of left aligned
+ * 				  data to the corresponding data holding
+ * 				  register.
+ *
+ * @param[DAC_RegDef_t*]	- Base address of the DAC register.
+ * @param[uint8_t]			- DAC Channel.
+ * 							  @DAC_Channel
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void DAC_Load12BitDataLeftAlign(DAC_RegDef_t *pDAC, uint8_t channel)
+{//TODO: Implement
+
+}
+
+/*
+ * @fn			- DAC_Load12BitDataRightAlign
+ *
+ * @brief		- This function loads 12 bits of right aligned
+ * 				  data to the corresponding data holding
+ * 				  register.
+ *
+ * @param[DAC_RegDef_t*]	- Base address of the DAC register.
+ * @param[uint8_t]			- DAC Channel.
+ * 							  @DAC_Channel
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void DAC_Load12BitDataRightAlign(DAC_RegDef_t *pDAC, uint8_t channel)
+{//TODO: Implement
+
+}
+
+/*
+ * @fn			- DAC_ClearDMA_UnderrunFlag
+ *
+ * @brief		- This function clears the DMA underrun flag.
+ *
+ * @param[DAC_RegDef_t*]	- Base address of the DAC register.
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void DAC_ClearDMA_UnderrunFlag(DAC_RegDef_t *pDAC)
+{//TODO: Implement
+
 }
 
 /***************************************************************************************/
@@ -313,6 +390,42 @@ static void DAC_ConfigCha2ChMskAmpSel(DAC_RegDef_t *pDAC, uint8_t unMsk_TriAmp)
 		pDAC->CR &= ~(0xf << DAC_CR_MAMP2);
 	else
 		pDAC->CR |= (unMsk_TriAmp << DAC_CR_MAMP2);
+}
+
+/*
+ * @fn			- DAC_ConfigDMA_En
+ *
+ * @brief		- The function configures if the DMA will enabled
+ * 				  or not.
+ *
+ * @param[DAC_RegDef_t*]	- Base address of the DAC register.
+ * @param[uint8_t]			- @DAC_ChannelX_DMA_Enable
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
+static void DAC_ConfigDMA_En(DAC_RegDef_t *pDAC, uint8_t dmaEn)
+{//TODO: Implement
+
+}
+
+/*
+ * @fn			- DAC_ConfigDMA_UR_En
+ *
+ * @brief		- The function configures if the DMA Underrun
+ * 				  interrupt will be enabled or not
+ *
+ * @param[DAC_RegDef_t*]	- Base address of the DAC register.
+ * @param[uint8_t]			- @DAC_ChannelX_DMA_UnderrunInterruptEnable
+ *
+ * @return		- None.
+ *
+ * @note		- Private Helper Function.
+ */
+static void DAC_ConfigDMA_UR_En(DAC_RegDef_t *pDAC, uint8_t dmaUrItEn)
+{//TODO: Implement
+
 }
 
 /*

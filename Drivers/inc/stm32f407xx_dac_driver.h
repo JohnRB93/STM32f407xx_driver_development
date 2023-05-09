@@ -105,6 +105,10 @@ void DAC_Init(DAC_Handle_t *pDAC_Handle, RCC_RegDef_t *pRCC);
 void DAC_DeInit(RCC_RegDef_t *pRCC);
 void DAC_PeriClockControl(DAC_RegDef_t *pDAC, RCC_RegDef_t *pRCC, uint8_t EnOrDi);
 
+void DAC_Load8BitDataRightAlign(DAC_RegDef_t *pDAC, uint8_t channel);
+void DAC_Load12BitDataLeftAlign(DAC_RegDef_t *pDAC, uint8_t channel);
+void DAC_Load12BitDataRightAlign(DAC_RegDef_t *pDAC, uint8_t channel);
+
 void DAC_ClearDMA_UnderrunFlag(DAC_RegDef_t *pDAC);
 
 /***************************************************************************************/
