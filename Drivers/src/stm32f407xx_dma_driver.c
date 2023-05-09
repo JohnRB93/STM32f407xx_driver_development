@@ -1191,7 +1191,7 @@ static void DMA_HandleHalfTransCmptIt(DMA_Handle_t *DMA_Handle, uint8_t reqStrea
 		case REQ_STREAM_7: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CHTIF7); break;
 	}
 	DMA_Handle->DMA_status = DMA_HALF_TRANSFER_COMPLETE;
-	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
+	DMA_ApplicationEventCallback(DMA_Handle->DMA_status, reqStream);
 }
 
 /*
@@ -1223,7 +1223,7 @@ static void DMA_HandleTransCmptIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 		case REQ_STREAM_7: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CTCIF7); break;
 	}
 	DMA_Handle->DMA_status = DMA_TRANSFER_COMPLETE;
-	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
+	DMA_ApplicationEventCallback(DMA_Handle->DMA_status, reqStream);
 }
 
 /*
@@ -1255,7 +1255,7 @@ static void DMA_HandleTransErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 		case REQ_STREAM_7: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CTEIF7); break;
 	}
 	DMA_Handle->DMA_status = DMA_TRANSFER_ERROR;
-	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
+	DMA_ApplicationEventCallback(DMA_Handle->DMA_status, reqStream);
 }
 
 /*
@@ -1287,7 +1287,7 @@ static void DMA_HandleFIFOErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 		case REQ_STREAM_7: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CFEIF7); break;
 	}
 	DMA_Handle->DMA_status = DMA_FIFO_ERROR;
-	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
+	DMA_ApplicationEventCallback(DMA_Handle->DMA_status, reqStream);
 }
 
 /*
@@ -1319,7 +1319,7 @@ static void DMA_HandleDirectErrIt(DMA_Handle_t *DMA_Handle, uint8_t reqStream)
 		case REQ_STREAM_7: DMA_Handle->pDMAx->HIFCR |= (1 << DMA_HIFCR_CDMEIF7); break;
 	}
 	DMA_Handle->DMA_status = DMA_DIRECT_ERROR;
-	DMA_ApplicationEventCallback(DMA_Handle, DMA_Handle->DMA_status, reqStream);
+	DMA_ApplicationEventCallback(DMA_Handle->DMA_status, reqStream);
 }
 
 

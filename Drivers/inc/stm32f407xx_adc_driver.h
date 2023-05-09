@@ -218,7 +218,7 @@ void ADC_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority);
 void ADC_IRQHandler(void);
 void ADC_IRQHandling(ADC_Handle_t *ADC_Handle);
 
-void ADC_ApplicationEventCallback(ADC_Handle_t *pADCHandle, uint8_t AppEv);
+void ADC_ApplicationEventCallback(uint8_t AppEv);
 
 /***************************************************************************************/
 

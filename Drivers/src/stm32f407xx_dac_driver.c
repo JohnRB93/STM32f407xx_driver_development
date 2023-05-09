@@ -35,7 +35,7 @@ static void DAC_EnableChannel(DAC_RegDef_t *pDAC, uint8_t chaEnOrDi);
  */
 void DAC_Init(DAC_Handle_t *pDAC_Handle, RCC_RegDef_t *pRCC)
 {
-	pRCC->APB1ENR |= (1 << RCC_APB1ENR_DACENENR);
+	pRCC->APB1ENR |= (1 << RCC_APB1ENR_DACEN);
 
 	DAC_ConfigOutBuf(pDAC_Handle->pDAC, pDAC_Handle->DAC_Config.DAC_ChaX_OutBufEn);
 	DAC_ConfigTrigEn(pDAC_Handle->pDAC, pDAC_Handle->DAC_Config.DAC_ChaX_TrigEn);
@@ -60,7 +60,9 @@ void DAC_Init(DAC_Handle_t *pDAC_Handle, RCC_RegDef_t *pRCC)
 		DAC_ConfigCha2ChMskAmpSel(pDAC_Handle->pDAC, pDAC_Handle->DAC_Config.DAC_Cha2_WaveGenEn);
 	}
 
-	DAC_EnableChannel();
+	DAC_ConfigDMA_En(pDAC_Handle->pDAC, pDAC_Handle->DAC_Config.DAC_ChaX_DMA_En);
+	DAC_ConfigDMA_UR_En(pDAC_Handle->pDAC, pDAC_Handle->DAC_Config.DAC_ChaX_DMA_UrEn);
+	DAC_EnableChannel(pDAC_Handle->pDAC, pDAC_Handle->DAC_Config.DAC_ChaSelect);
 }
 
 /*
@@ -117,9 +119,16 @@ void DAC_PeriClockControl(DAC_RegDef_t *pDAC, RCC_RegDef_t *pRCC, uint8_t EnOrDi
  *
  * @note		- None.
  */
-void DAC_Load8BitDataRightAlign(DAC_RegDef_t *pDAC, uint8_t channel)
-{//TODO: Implement
+void DAC_Load8BitDataRightAlign(DAC_RegDef_t *pDAC, uint8_t channel, uint8_t data)
+{
+	if(channel == DAC_CHANNEL_1)
+		pDAC->DHR8R1 = data;
+	else if(channel == DAC_CHANNEL_2)
+		pDAC->DHR8R2 = data;
+	else
+	{//TODO: Implement dual data load
 
+	}
 }
 
 /*
@@ -137,9 +146,26 @@ void DAC_Load8BitDataRightAlign(DAC_RegDef_t *pDAC, uint8_t channel)
  *
  * @note		- None.
  */
-void DAC_Load12BitDataLeftAlign(DAC_RegDef_t *pDAC, uint8_t channel)
-{//TODO: Implement
+void DAC_Load12BitDataLeftAlign(DAC_RegDef_t *pDAC, uint8_t channel, uint16_t data)
+{
+	if(data <= 0xfff)
+	{
+		if(channel == DAC_CHANNEL_1)
+		{
+			pDAC->DHR12L1 &= ~(0xfff << 4);
+			pDAC->DHR12L1 |= (data << 4);
+		}
+		else if(channel == DAC_CHANNEL_2)
+		{
+			pDAC->DHR12L2 &= ~(0xfff << 4);
+			pDAC->DHR12L2 |= (data << 4);
+		}
 
+		else
+		{//TODO: Implement dual data load
+
+		}
+	}
 }
 
 /*
@@ -157,9 +183,42 @@ void DAC_Load12BitDataLeftAlign(DAC_RegDef_t *pDAC, uint8_t channel)
  *
  * @note		- None.
  */
-void DAC_Load12BitDataRightAlign(DAC_RegDef_t *pDAC, uint8_t channel)
-{//TODO: Implement
+void DAC_Load12BitDataRightAlign(DAC_RegDef_t *pDAC, uint8_t channel, uint16_t data)
+{
+	if(data <= 0xfff)
+	{
+		if(channel == DAC_CHANNEL_1)
+			pDAC->DHR12R1 = data;
+		else if(channel == DAC_CHANNEL_2)
+			pDAC->DHR12R2 = data;
+		else
+		{//TODO: Implement dual data load
 
+		}
+	}
+}
+
+/*
+ * @fn			- DAC_StartSoftwareTrigConv
+ *
+ * @brief		- This function starts conversion by setting the
+ * 				  SWTRIG bit.
+ *
+ * @param[DAC_RegDef_t*]	- Base address of the DAC register.
+ * @param[uint8_t]			- DAC Channel.
+ * 							  @DAC_Channel
+ *
+ * @return		- None.
+ *
+ * @note		- This only works if software trigger(0b111) is selected
+ * 				  in the TSEL control bits.
+ */
+void DAC_StartSoftwareTrigConv(DAC_RegDef_t *pDAC, uint8_t channel)
+{
+	if(channel == DAC_CHANNEL_1)
+		pDAC->SWTRIGR |= (1 << DAC_SWTRIG1);
+	else
+		pDAC->SWTRIGR |= (1 << DAC_SWTRIG2);
 }
 
 /*
@@ -173,17 +232,13 @@ void DAC_Load12BitDataRightAlign(DAC_RegDef_t *pDAC, uint8_t channel)
  *
  * @note		- None.
  */
-void DAC_ClearDMA_UnderrunFlag(DAC_RegDef_t *pDAC)
-{//TODO: Implement
-
+void DAC_ClearDMA_UnderrunFlag(DAC_RegDef_t *pDAC, uint8_t channel)
+{
+	if(channel == DAC_CHANNEL_1)
+		pDAC->SR |= (1 << DAC_DMAUDR1);
+	else
+		pDAC->SR |= (1 << DAC_DMAUDR2);
 }
-
-/***************************************************************************************/
-
-
-/***************** DAC IRQ Handling ****************************************************/
-
-
 
 /***************************************************************************************/
 
@@ -229,7 +284,10 @@ static void DAC_ConfigOutBuf(DAC_RegDef_t *pDAC, uint8_t buffEnOrDi)
  *
  * @brief		- This function configures the trigger enable bits
  * 				  for either channel depending on what's passed in
- * 				  for the second argument.
+ * 				  for the second argument. If trigger for channel x
+ * 				  is not enabled, then data loaded to the DHRx are
+ * 				  automatically moved to DORx one APB1 clock cycle
+ * 				  later.
  *
  * @param[DAC_RegDef_t*]	- Base address of the DAC register.
  * @param[uint8_t]			- Trigger Enable or Disable for either channel.
@@ -406,8 +464,20 @@ static void DAC_ConfigCha2ChMskAmpSel(DAC_RegDef_t *pDAC, uint8_t unMsk_TriAmp)
  * @note		- Private Helper Function.
  */
 static void DAC_ConfigDMA_En(DAC_RegDef_t *pDAC, uint8_t dmaEn)
-{//TODO: Implement
-
+{
+	if(dmaEn == DAC_DMA_DISABLE)
+	{//DMA is disabled for both channels.
+		pDAC->CR &= ~(1 << DAC_CR_DMAEN1);
+		pDAC->CR &= ~(1 << DAC_CR_DMAEN2);
+	}else if(dmaEn == DAC_CHA1_DMA_ENABLE)
+		pDAC->CR |= (1 << DAC_CR_DMAEN1);//DMA is enabled for channel 1.
+	else if(dmaEn == DAC_CHA2_DMA_ENABLE)
+		pDAC->CR |= (1 << DAC_CR_DMAEN2);//DMA is enabled for channel 2.
+	else
+	{//DMA is enabled for both channels.
+		pDAC->CR |= (1 << DAC_CR_DMAEN1);
+		pDAC->CR |= (1 << DAC_CR_DMAEN2);
+	}
 }
 
 /*
@@ -424,8 +494,20 @@ static void DAC_ConfigDMA_En(DAC_RegDef_t *pDAC, uint8_t dmaEn)
  * @note		- Private Helper Function.
  */
 static void DAC_ConfigDMA_UR_En(DAC_RegDef_t *pDAC, uint8_t dmaUrItEn)
-{//TODO: Implement
-
+{
+	if(dmaUrItEn == DAC_DMA_UR_IT_DISABLE)
+	{//DMA underrun interrupt is disabled for both channels.
+		pDAC->CR &= ~(1 << DAC_CR_DMAUDRIE1);
+		pDAC->CR &= ~(1 << DAC_CR_DMAUDRIE2);
+	}else if(dmaUrItEn == DAC_CHA1_UR_IT_ENABLE)
+		pDAC->CR |= (1 << DAC_CR_DMAUDRIE1);//DMA underrun interrupt is enabled for channel 1.
+	else if(dmaUrItEn == DAC_CHA2_UR_IT_ENABLE)
+		pDAC->CR |= (1 << DAC_CR_DMAUDRIE2);//DMA underrun interrupt is enabled for channel 2.
+	else
+	{//DMA underrun interrupt is enabled for both channels.
+		pDAC->CR |= (1 << DAC_CR_DMAUDRIE1);
+		pDAC->CR |= (1 << DAC_CR_DMAUDRIE2);
+	}
 }
 
 /*

@@ -344,6 +344,7 @@ void ADC_StartConversion(ADC_RegDef_t *pADCx, uint8_t group, uint8_t conversionM
 		{//Continuous Conversion Mode.
 			pADCx->CR2 |= (1 << ADC_CR2_CONT);
 			pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
+		}
 	}else
 	{//Injected Group will be converted.
 		if(conversionMode == ADC_SINL_CONV_MODE)
@@ -601,7 +602,7 @@ void ADC_IRQHandling(ADC_Handle_t *ADC_Handle)
 		ADC_HandleOVRIt(ADC_Handle);
 	}
 
-	ADC_ApplicationEventCallback(ADC_Handle, ADC_Handle->ADC_status);
+	ADC_ApplicationEventCallback(ADC_Handle->ADC_status);
 }
 
 /***************************************************************************************/

@@ -144,15 +144,15 @@ void DMA2_Stream4_IRQHandler(void)
 }
 
 
-void ADC_ApplicationEventCallback(ADC_Handle_t *pADCHandle, uint8_t AppEv)
+void ADC_ApplicationEventCallback(uint8_t AppEv)
 {
 	if(AppEv == ADC_END_OF_CONVERSION_REG)
 	{
-		pADCHandle->ADC_status = ADC_OK;
+		ADC_IN.ADC_status = ADC_OK;
 	}
 }
 
-void DMA_ApplicationEventCallback(DMA_Handle_t *pDMAHandle, uint8_t AppEv, uint8_t reqStream)
+void DMA_ApplicationEventCallback(uint8_t AppEv, uint8_t reqStream)
 {
 	if(AppEv == DMA_TRANSFER_COMPLETE)
 	{
@@ -177,14 +177,14 @@ void DMA_ApplicationEventCallback(DMA_Handle_t *pDMAHandle, uint8_t AppEv, uint8
 	}
 	else if(AppEv == DMA_TRANSFER_ERROR)
 	{
-		DMA_ClearEN_Bit(pDMAHandle->pDMAx, reqStream);
+		DMA_ClearEN_Bit(dma.pDMAx, reqStream);
 		while(1);
 	}
 	else if(AppEv == DMA_DIRECT_ERROR)
 	{
-		DMA_ClearEN_Bit(pDMAHandle->pDMAx, reqStream);
+		DMA_ClearEN_Bit(dma.pDMAx, reqStream);
 		while(1);
 	}
 
-	pDMAHandle->DMA_status = DMA_OK;
+	dma.DMA_status = DMA_OK;
 }

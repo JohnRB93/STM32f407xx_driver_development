@@ -180,6 +180,6 @@ void DMA2_Stream5_IRQHandling(DMA_Handle_t *DMA_Handle);
 void DMA2_Stream6_IRQHandling(DMA_Handle_t *DMA_Handle);
 void DMA2_Stream7_IRQHandling(DMA_Handle_t *DMA_Handle);
 
-void DMA_ApplicationEventCallback(DMA_Handle_t *pDMAHandle, uint8_t AppEv, uint8_t reqStream);
+void DMA_ApplicationEventCallback(uint8_t AppEv, uint8_t reqStream);
 
 #endif /* INC_STM32F407XX_DMA_DRIVER_H_ */
