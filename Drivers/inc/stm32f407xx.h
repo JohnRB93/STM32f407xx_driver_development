@@ -8,7 +8,7 @@
 #include<stddef.h>
 
 
-
+//TODO: Finish Documentation
 /**********************************************************************************************************************/
 /********************************************* How to use this library ************************************************/
 /* (*) Reset and Clock Control                                                                                        */
@@ -26,7 +26,32 @@
 /* (*) Power Controller (PWR)                                                                                         */
 /* */
 /* (*) General Port Input Output (GPIO)                                                                               */
-/* */
+/* To configure a GPIO pin, the user application will need to initialize a GPIO_Handle_t structure and program the    */
+/* GPIO_PinConfig_t structure as per need. The pin mode will need to be configured to the following:                  */
+/*   *Input Mode                                                                                                      */
+/*   *Output Mode                                                                                                     */
+/*   *Alternate Function Mode                                                                                         */
+/*     *To know which functions are multiplexed on each GPIO pin, refer to the datasheets.                            */
+/*   *Analog Mode                                                                                                     */
+/*   *Interrupt Mode (Falling Edge, Rising Edge, Falling and Rising Edge)                                             */
+/* For Input Mode:                                                                                                    */
+/*   *Pull-Up or Pull-Down resistors can be configured.                                                               */
+/*   *Data can be read from the data register with the function GPIO_ReadFromInputPin() or GPIO_ReadFromInputPort().  */
+/* For Output Mode:                                                                                                   */
+/*   *Pull-Up or Pull-Down resistors can be configured.                                                               */
+/*   *Open-Drain Output Mode and Push-Pull Output Mode can be configured.                                             */
+/*   *A read access to the input data register gets the I/O state.                                                    */
+/*   *A read access to the output data register gets the last written value.                                          */
+/* For Alternate Function Mode:                                                                                       */
+/*   *The output buffer can be configured as open-drain or push-pull.                                                 */
+/*   *Pull-Up or Pull-Down resistors can be configured.                                                               */
+/*   *A read access to the input data register gets the I/O state.                                                    */
+/* For Analog Mode:                                                                                                   */
+/*   *Pull-Up or Pull-Down resistors can be configured.                                                               */
+/*   *Read access to the input data register gets the value “0”.                                                      */
+/*   *The output buffer is disabled.                                                                                  */
+/* For Interrupt Mode:                                                                                                */
+/*   *The interrupt generation can be configured to either Falling Edge, Rising Edge, or Falling and Rising Edge.     */
 /* (*) Direct Memory Access (DMA)                                                                                     */
 /* */
 /* (*) Interrupts and Events (NVIC) (EXTI)                                                                            */
@@ -42,6 +67,16 @@
 /* (*) Universal Synchronous Asynchronous Receiver Transmitter (USART)                                                */
 /* */
 
+/* Common Abbreviations:                                                                                              */
+/* *IT or It -> Interrupt                                                                                             */
+/* *En -> Enable                                                                                                      */
+/* *Di -> Disable                                                                                                     */
+/* *Ur or UR -> Underrun                                                                                              */
+/* *Config -> Configuration                                                                                           */
+/* *SR -> Status Register                                                                                             */
+/* *CR -> Control Register                                                                                            */
+/* *DR -> Data Register                                                                                               */
+/* *Reg -> Register                                                                                                   */
 /**********************************************************************************************************************/
 
 
@@ -108,6 +143,7 @@
 #define DMA2_BASEADDR						0x40026400U			/*Base Address of Peripheral Register DMA2*/
 
 //Base addresses of peripherals on the APB1 bus.
+#define DAC_BASEADDR						0x40007400U			/*Base Address of DAC Register*/
 #define SPI2_I2S2_BASEADDR					0x40003800U			/*Base Address of SPI2/I2S2 Registers*/
 #define SPI3_I2S3_BASEADDR					0x40003C00U			/*Base Address of SPI3/I2S3 Register*/
 #define USART2_BASEADDR						0x40004400U			/*Base Address of USART2 Register*/
@@ -321,6 +357,24 @@ typedef struct
 
 typedef struct
 {
+	__vo uint32_t CR;			/*DAC control register							Address offset: 0x00*/
+	__vo uint32_t SWTRIGR;		/*DAC software trigger register					Address offset: 0x04*/
+	__vo uint32_t DHR12R1;		/*DAC channel 1 12-bit right-aligned data holding register		Address offset: 0x08*/
+	__vo uint32_t DHR12L1;		/*DAC channel 1 12-bit left aligned data holding register		Address offset: 0x0C*/
+	__vo uint32_t DHR8R1;		/*DAC channel 1 8-bit right aligned data holding register		Address offset: 0x10*/
+	__vo uint32_t DHR12R2;		/*DAC channel 2 12-bit right aligned data holding register		Address offset: 0x14*/
+	__vo uint32_t DHR12L2;		/*DAC channel 2 12-bit left aligned data holding register		Address offset: 0x18*/
+	__vo uint32_t DHR8R2;		/*DAC channel 2 8-bit right-aligned data holding register		Address offset: 0x1C*/
+	__vo uint32_t DHR12RD;		/*Dual DAC 12-bit right-aligned data holding register			Address offset: 0x20*/
+	__vo uint32_t DHR12LD;		/*DUAL DAC 12-bit left aligned data holding register			Address offset: 0x24*/
+	__vo uint32_t DHR8RD;		/*DUAL DAC 8-bit right aligned data holding register			Address offset: 0x28*/
+	__vo uint32_t DOR1;			/*DAC channel 1 data output register			Address offset: 0x2C*/
+	__vo uint32_t DOR2;			/*DAC channel 2 data output register			Address offset: 0x30*/
+	__vo uint32_t SR;			/*DAC status register							Address offset: 0x34*/
+}DAC_RegDef_t;
+
+typedef struct
+{
 	__vo uint32_t SxCR;			/*DMA stream x configuration register
 									Address offset: 0x10 + 0x18 × stream number*/
 	__vo uint32_t SxNDTR;		/*DMA stream x number of data register
@@ -379,6 +433,8 @@ typedef struct
 #define ADC1		((ADC_RegDef_t*)ADC1_BASEADDR)
 #define ADC2		((ADC_RegDef_t*)ADC2_BASEADDR)
 #define ADC3		((ADC_RegDef_t*)ADC3_BASEADDR)
+
+#define DAC			((DAC_RegDef_t*)DAC_BASEADDR)
 
 #define DMA1		((DMA_RegDef_t*)DMA1_BASEADDR)
 #define DMA2		((DMA_RegDef_t*)DMA2_BASEADDR)
@@ -1169,6 +1225,73 @@ typedef struct
 
 
 /************************************************************************************************************************
+*               Bit Position Definitions of DAC Peripherals                                                             *
+************************************************************************************************************************/
+
+//Bit position definitions for DAC_CR
+#define DAC_CR_EN1			0
+#define DAC_CR_BOFF1		1
+#define DAC_CR_TEN1			2
+#define DAC_CR_TSEL1		3
+#define DAC_CR_WAVE1		6
+#define DAC_CR_MAMP1		8
+#define DAC_CR_DMAEN1		12
+#define DAC_CR_DMAUDRIE1	13
+#define DAC_CR_EN2			16
+#define DAC_CR_BOFF2		17
+#define DAC_CR_TEN2			18
+#define DAC_CR_TSEL2		19
+#define DAC_CR_WAVE2		22
+#define DAC_CR_MAMP2		24
+#define DAC_CR_DMAEN2		28
+#define DAC_CR_DMAUDRIE2	29
+
+//Bit position definitions for DAC_SWTRIGR
+#define DAC_SWTRIG1			0
+#define DAC_SWTRIG2			1
+
+//Bit position definitions for DAC_DHR12R1
+#define DAC_DHR12R1			0
+
+//Bit position definitions for DAC_DHR12L1
+#define DAC_DHR12L1			4
+
+//Bit position definitions for DAC_DHR8R1
+#define DAC_DHR8R1			0
+
+//Bit position definitions for DAC_DHR12R2
+#define DAC_DHR12R2			0
+
+//Bit position definitions for DAC_DHR12L2
+#define DAC_DHR12L2			4
+
+//Bit position definitions for DAC_DHR8R2
+#define DAC_DHR8R2			0
+
+//Bit position definitions for DAC_DHR12RD
+#define DAC_DHR12RD1		0
+#define DAC_DHR12RD2		16
+
+//Bit position definitions for DAC_DHR12LD
+#define DAC_DHR12LD1		4
+#define DAC_DHR12LD2		20
+
+//Bit position definitions for DAC_DHR8RD
+#define DAC_DHR8RD1			0
+#define DAC_DHR8RD2			8
+
+//Bit position definitions for DAC_DOR1
+#define DAC_C1DOR			0
+
+//Bit position definitions for DAC_DOR2
+#define DAC_C2DOR			0
+
+//Bit position definitions for DAC_SR
+#define DAC_DMAUDR1			13
+#define DAC_DMAUDR2			29
+
+
+/************************************************************************************************************************
 *               Bit Position Definitions of DMAx Peripherals                                                            *
 ************************************************************************************************************************/
 
@@ -1300,7 +1423,7 @@ typedef struct
 #define DMA_SXFCR_FEIE			7
 
 
-//Driver includes
+/*********************Driver includes*********************/
 #include"stm32f407xx_gpio_driver.h"
 #include"stm32f407xx_spi_driver.h"
 #include"stm32f407xx_i2c_driver.h"
@@ -1308,5 +1431,8 @@ typedef struct
 #include"stm32f407xx_rcc_driver.h"
 #include"stm32f407xx_adc_driver.h"
 #include"stm32f407xx_dma_driver.h"
+#include"stm32f407xx_dac_driver.h"
+/*********************************************************/
+
 
 #endif /* INC_STM32F407XX_H_ */

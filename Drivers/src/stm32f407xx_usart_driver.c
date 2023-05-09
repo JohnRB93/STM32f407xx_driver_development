@@ -131,7 +131,6 @@ void USART_Init(USART_Handle_t *pUSARTHandle, RCC_RegDef_t *pRCC, RCC_Config_t r
 	pUSARTHandle->pUSARTx->CR3 = tempreg;
 
 	/*** Configuration of BRR(Baudrate register) ***/
-
 	USART_SetBaudRate(pUSARTHandle->pUSARTx, pRCC, rccConfig, pUSARTHandle->USART_Config.USART_Baud);
 
 }
@@ -245,7 +244,6 @@ void USART_ReceiveData(USART_Handle_t *pUSARTHandle, uint8_t *pRxBuffer, uint32_
 	for(uint32_t i = 0 ; i < Len; i++)
 	{	//Wait until RXNE flag is set in the SR.
 		while(!USART_GetFlagStatus(pUSARTHandle->pUSARTx, USART_FLAG_RXNE));
-
 		//Check the USART_WordLength to decide whether we are going to receive 9bit of data in a frame or 8 bit.
 		if(pUSARTHandle->USART_Config.USART_WordLength == USART_WORDLEN_9BITS)
 		{//We are going to receive 9bit data in a frame.
@@ -254,17 +252,13 @@ void USART_ReceiveData(USART_Handle_t *pUSARTHandle, uint8_t *pRxBuffer, uint32_
 			{//No parity is used. So, all 9bits will be of user data.
 				//Read only first 9 bits. So, mask the DR with 0x01FF.
 				*((uint16_t*) pRxBuffer) = (pUSARTHandle->pUSARTx->DR  & (uint16_t)0x01FF);
-
-				//Now increment the pRxBuffer two times.
-				pRxBuffer++;
+				pRxBuffer++;//Increment the pRxBuffer two times.
 				pRxBuffer++;
 			}
 			else
 			{//Parity is used, so, 8bits will be of user data and 1 bit is parity.
 				*pRxBuffer = (pUSARTHandle->pUSARTx->DR  & (uint8_t)0xFF);
-
-				//Increment the pRxBuffer.
-				pRxBuffer++;
+				pRxBuffer++;//Increment the pRxBuffer.
 			}
 		}
 		else
@@ -280,8 +274,7 @@ void USART_ReceiveData(USART_Handle_t *pUSARTHandle, uint8_t *pRxBuffer, uint32_
 				//read only 7 bits , hence mask the DR with 0X7F
 				*pRxBuffer = (uint8_t)(pUSARTHandle->pUSARTx->DR  & (uint8_t)0x7F);
 			}
-			//increment the pRxBuffer
-			pRxBuffer++;
+			pRxBuffer++;//Increment the pRxBuffer
 		}
 	}
 }
@@ -308,12 +301,8 @@ uint8_t USART_SendDataIT(USART_Handle_t *pUSARTHandle, uint8_t *pTxBuffer, uint3
 		pUSARTHandle->TxLen = Len;
 		pUSARTHandle->pTxBuffer = pTxBuffer;
 		pUSARTHandle->TxBusyState = USART_BUSY_IN_TX;
-
-		//Enable interrupt for TXE
-		pUSARTHandle->pUSARTx->CR1 |= (1 << USART_CR1_TXEIE);
-
-		//Enable interrupt for TC
-		pUSARTHandle->pUSARTx->CR1 |= (1 << USART_CR1_TCIE);
+		pUSARTHandle->pUSARTx->CR1 |= (1 << USART_CR1_TXEIE);//Enable interrupt for TXE
+		pUSARTHandle->pUSARTx->CR1 |= (1 << USART_CR1_TCIE);//Enable interrupt for TC
 	}
 	return txstate;
 }
@@ -340,9 +329,7 @@ uint8_t USART_ReceiveDataIT(USART_Handle_t *pUSARTHandle, uint8_t *pRxBuffer, ui
 		pUSARTHandle->RxLen = Len;
 		pUSARTHandle->pRxBuffer = pRxBuffer;
 		pUSARTHandle->RxBusyState = USART_BUSY_IN_RX;
-
-		//Enable interrupt for RXNE
-		pUSARTHandle->pUSARTx->CR1 |= (1 << USART_CR1_RXNEIE);
+		pUSARTHandle->pUSARTx->CR1 |= (1 << USART_CR1_RXNEIE);//Enable interrupt for RXNE
 	}
 	return rxstate;
 }
@@ -623,8 +610,7 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 	/*** Check for Noise Flag, Overrun Error, and Framing Error in Multibuffer Communication events. ***/
 
 	//Noise Flag, Overrun error and Framing Error in multibuffer communication
-	//We dont discuss multibuffer communication in this course. please refer to the RM
-	//The blow code will get executed in only if multibuffer mode is used.
+	//The below code will get executed in only if multibuffer mode is used.
 	EnItCtrlBit =  pUSARTHandle->pUSARTx->CR3 & ( 1 << USART_CR3_EIE) ;
 
 	if(EnItCtrlBit )

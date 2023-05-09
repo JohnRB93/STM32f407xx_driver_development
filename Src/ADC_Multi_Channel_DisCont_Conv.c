@@ -50,8 +50,6 @@ int main(void)
 	ADC_Config();
 	DMA_Config();
 
-
-
 	DMA_ConfigInterrupts(&dma, REQ_STREAM_2);
 	DMA_ActivateStream(dma.pDMAx, REQ_STREAM_2);
 

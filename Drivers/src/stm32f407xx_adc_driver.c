@@ -344,10 +344,6 @@ void ADC_StartConversion(ADC_RegDef_t *pADCx, uint8_t group, uint8_t conversionM
 		{//Continuous Conversion Mode.
 			pADCx->CR2 |= (1 << ADC_CR2_CONT);
 			pADCx->CR2 |= (1 << ADC_CR2_SWSTART);
-		}/*else if(conversionMode == ADC_DISCONT_CONV_MODE)
-		{//Discontinuous Conversion Mode.
-			pADCx->CR1 |= (1 << ADC_CR1_DISCEN);
-		}*/
 	}else
 	{//Injected Group will be converted.
 		if(conversionMode == ADC_SINL_CONV_MODE)
