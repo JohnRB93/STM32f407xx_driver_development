@@ -1,10 +1,3 @@
-/*
- * stm32f407xx_i2c_driver.h
- *
- *  Created on: Feb 19, 2023
- *      Author: john_
- */
-
 #ifndef INC_STM32F407XX_I2C_DRIVER_H_
 #define INC_STM32F407XX_I2C_DRIVER_H_
 
@@ -93,11 +86,11 @@ typedef struct
 /********************************************************************************************************************/
 
 //Peripheral Clock Setup
-void I2C_PeriClockControl(I2C_RegDef_t *pI2Cx, RCC_RegDef_t *pRCC, uint8_t EnOrDi);
+void I2C_PeriClockControl(I2C_RegDef_t *pI2Cx, uint8_t EnOrDi);
 
 //Initialization and De-initialization
-void I2C_Init(I2C_Handle_t *pI2CHandle, RCC_RegDef_t *pRCC, RCC_Config_t rccConfig);
-void I2C_DeInit(I2C_RegDef_t *pI2Cx, RCC_RegDef_t *pRCC);
+void I2C_Init(I2C_Handle_t *pI2CHandle, RCC_Config_t rccConfig);
+void I2C_DeInit(I2C_RegDef_t *pI2Cx);
 
 //Data Send and Receive
 void I2C_MasterSendData(I2C_Handle_t *pI2CHandle, uint8_t *pTxbuffer, uint32_t len, uint8_t slaveAddr, uint8_t SR);

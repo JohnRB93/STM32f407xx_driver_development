@@ -78,13 +78,13 @@ uint8_t RCC_GetSysClkSwStatus(RCC_RegDef_t *pRCC)
  *
  * @brief		- Calculates the peripheral1 clock value.
  *
- * @param[Void] - None.
+ * @param[RCC_Config_t] - RCC Configuration Structure.
  *
  * @return		- Value of the peripheral clock value(uint32_t).
  *
  * @note		- None.
  */
-uint32_t RCC_GetPCLK1Value(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
+uint32_t RCC_GetPCLK1Value(RCC_Config_t rccConfig)
 {
 	uint32_t systemClk;
 	uint8_t ahbp, apb1p;
@@ -95,7 +95,7 @@ uint32_t RCC_GetPCLK1Value(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
 	else if(rccConfig.RCC_ClockSource == RCC_SOURCE_HSE)
 		systemClk = rccConfig.RCC_HSE_Frequency;//System clock is HSE.
 	else if(rccConfig.RCC_ClockSource == RCC_SOURCE_PLL)
-		systemClk = RCC_GetPLLOutputClock(pRCC, rccConfig);//System clock is PLL.
+		systemClk = RCC_GetPLLOutputClock(rccConfig);//System clock is PLL.
 
 	//Find AHB Prescaler
 	if(rccConfig.RCC_AHB_Prescaler < RCC_AHB_DIV_002)
@@ -117,13 +117,13 @@ uint32_t RCC_GetPCLK1Value(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
  *
  * @brief		- Calculates the peripheral clock2 value.
  *
- * @param[Void] - None.
+ * @param[RCC_Config_t] - RCC Configuration Structure.
  *
  * @return		- Value of the peripheral clock value(uint32_t).
  *
  * @note		- None.
  */
-uint32_t RCC_GetPCLK2Value(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
+uint32_t RCC_GetPCLK2Value(RCC_Config_t rccConfig)
 {
 	uint32_t systemClk;
 	uint8_t ahbp, apb2p;
@@ -134,7 +134,7 @@ uint32_t RCC_GetPCLK2Value(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
 	else if(rccConfig.RCC_ClockSource == RCC_SOURCE_HSE)
 		systemClk = rccConfig.RCC_HSE_Frequency;//System clock is HSE.
 	else if(rccConfig.RCC_ClockSource == RCC_SOURCE_PLL)
-		systemClk = RCC_GetPLLOutputClock(pRCC, rccConfig);//System clock is PLL.
+		systemClk = RCC_GetPLLOutputClock(rccConfig);//System clock is PLL.
 
 	//Find AHB Prescaler
 	if(rccConfig.RCC_AHB_Prescaler < RCC_AHB_DIV_002)
@@ -189,7 +189,7 @@ void RCC_ConfigPLLReg(RCC_RegDef_t *pRCC, RCC_PLL_Config_t PLL_Config)
  * @brief		- Calculates and returns the PLL output clock
  * 				  value for SYSCLK.
  *
- * @param[Void] - None.
+ * @param[RCC_Config_t] - RCC Configuration Structure.
  *
  * @return		- PLL output clock value(uint32_t).
  *
@@ -197,7 +197,7 @@ void RCC_ConfigPLLReg(RCC_RegDef_t *pRCC, RCC_PLL_Config_t PLL_Config)
  * 				  (USB OTG FS, SDIO, RNG clock output) not yet
  * 				  implemented.
  */
-uint32_t RCC_GetPLLOutputClock(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
+uint32_t RCC_GetPLLOutputClock(RCC_Config_t rccConfig)
 {
 	uint32_t vcoClk, pllClkInput;
 	uint8_t pllP;
@@ -210,11 +210,11 @@ uint32_t RCC_GetPLLOutputClock(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
 
 	vcoClk = pllClkInput * (rccConfig.RCC_PLL_Config.PLL_N / rccConfig.RCC_PLL_Config.PLL_M);
 
-	if(((pRCC->PLLCFGR >> RCC_PLLCFGR_PLLP0) & 0x3) == PLL_P_DIV_2)
+	if(((RCC->PLLCFGR >> RCC_PLLCFGR_PLLP0) & 0x3) == PLL_P_DIV_2)
 		pllP = 2;
-	else if(((pRCC->PLLCFGR >> RCC_PLLCFGR_PLLP0) & 0x3) == PLL_P_DIV_4)
+	else if(((RCC->PLLCFGR >> RCC_PLLCFGR_PLLP0) & 0x3) == PLL_P_DIV_4)
 		pllP = 4;
-	else if(((pRCC->PLLCFGR >> RCC_PLLCFGR_PLLP0) & 0x3) == PLL_P_DIV_6)
+	else if(((RCC->PLLCFGR >> RCC_PLLCFGR_PLLP0) & 0x3) == PLL_P_DIV_6)
 		pllP = 6;
 	else
 		pllP = 8;
@@ -251,13 +251,12 @@ void RCC_Enable(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
 		pRCC->CR &= ~(1 << RCC_CR_PLLON);
 
 	}else if(rccConfig.RCC_ClockSource == RCC_SOURCE_PLL)
-	{	//TODO: Implement Flash Peripheral set up and refactor below code.
-		uint32_t *pFlashAcr = (uint32_t*)0x40023C00U;
-		*pFlashAcr |= (0x5 << 0);
-		*pFlashAcr |= (1 << 8);
-		*pFlashAcr |= (1 << 9);
-		*pFlashAcr |= (1 << 10);
-		while(! (((*pFlashAcr >> 0) & 0x5) == 0x5) );
+	{
+		FLASH->ACR |= (0x5 << FLASH_ACR_LATENCY);
+		FLASH->ACR |= (1 << FLASH_ACR_PRFTEN);
+		FLASH->ACR |= (1 << FLASH_ACR_ICEN);
+		FLASH->ACR |= (1 << FLASH_ACR_DCEN);
+		while(! (((FLASH->ACR >> 0) & 0x5) == 0x5) );
 
 		pRCC->CFGR &= ~(1 << RCC_CFGR_SW1);
 		pRCC->CFGR |= (1 << RCC_CFGR_SW1);
@@ -266,8 +265,6 @@ void RCC_Enable(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
 
 		while(RCC_GetSysClkSwStatus(pRCC) != 0x2);
 	}
-
-
 }
 
 

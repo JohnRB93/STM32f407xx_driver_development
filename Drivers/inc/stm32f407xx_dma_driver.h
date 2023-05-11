@@ -132,9 +132,9 @@ typedef struct
 /*      For more information about the the APIs check the function definitions         */
 /***************************************************************************************/
 
-void DMA_Init(DMA_Handle_t *DMA_Handle, RCC_RegDef_t *pRCC);
-void DMA_DeInit(DMA_Handle_t *DMA_Handle, RCC_RegDef_t *pRCC);
-void DMA_PeriClockControl(DMA_RegDef_t *pDMAx, RCC_RegDef_t *pRCC, uint8_t EnOrDi);
+void DMA_Init(DMA_Handle_t *DMA_Handle);
+void DMA_DeInit(DMA_Handle_t *DMA_Handle);
+void DMA_PeriClockControl(DMA_RegDef_t *pDMAx, uint8_t EnOrDi);
 void DMA_ConfigStream(DMA_Handle_t *DMA_Handle, uint8_t reqStream, uint32_t periAddress,
 		uint32_t memAddress, uint8_t channel);
 void DMA_findMburstBeatPsizeMsize(DMA_RegDef_t *pDMAx, uint8_t reqStream,

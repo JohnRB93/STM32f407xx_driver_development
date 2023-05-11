@@ -33,10 +33,9 @@ static void DAC_EnableChannel(DAC_RegDef_t *pDAC, uint8_t chaEnOrDi);
  * @note		- The GPIO pins that will be used(PA4 or PA5), should first
  * 				  be configured to analog mode to avoid parasitic consumption.
  */
-void DAC_Init(DAC_Handle_t *pDAC_Handle, RCC_RegDef_t *pRCC)
+void DAC_Init(DAC_Handle_t *pDAC_Handle)
 {
-	pRCC->APB1ENR |= (1 << RCC_APB1ENR_DACEN);
-
+	DAC_PeriClockControl(pDAC_Handle->pDAC, ENABLE);
 	DAC_ConfigOutBuf(pDAC_Handle->pDAC, pDAC_Handle->DAC_Config.DAC_ChaX_OutBufEn);
 	DAC_ConfigTrigEn(pDAC_Handle->pDAC, pDAC_Handle->DAC_Config.DAC_ChaX_TrigEn);
 
@@ -70,16 +69,16 @@ void DAC_Init(DAC_Handle_t *pDAC_Handle, RCC_RegDef_t *pRCC)
  *
  * @brief		- This function de-initializes the DAC peripheral.
  *
- * @param[RCC_RegDef_t*]	- Base address of the RCC register.
+ * @param[void]	- None.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void DAC_DeInit(RCC_RegDef_t *pRCC)
+void DAC_DeInit(void)
 {
-	pRCC->APB1RSTR &= ~(1 << RCC_APB1RSTR_DACRST);
-	pRCC->APB1RSTR |= (1 << RCC_APB1RSTR_DACRST);
+	RCC->APB1RSTR &= ~(1 << RCC_APB1RSTR_DACRST);
+	RCC->APB1RSTR |= (1 << RCC_APB1RSTR_DACRST);
 }
 
 /*
@@ -89,19 +88,18 @@ void DAC_DeInit(RCC_RegDef_t *pRCC)
  * 				  given DAC register.
  *
  * @param[DAC_RegDef_t*]	- Base address of the DAC register.
- * @param[RCC_RegDef_t*]	- Base address of the RCC register.
  * @param[uint8_t]			- ENABLE or DISABLE macros.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void DAC_PeriClockControl(DAC_RegDef_t *pDAC, RCC_RegDef_t *pRCC, uint8_t EnOrDi)
+void DAC_PeriClockControl(DAC_RegDef_t *pDAC, uint8_t EnOrDi)
 {
 	if((EnOrDi == ENABLE) && (pDAC == DAC))
-		pRCC->APB1ENR |= (1 << RCC_APB1ENR_DACEN);
+		RCC->APB1ENR |= (1 << RCC_APB1ENR_DACEN);
 	else
-		pRCC->APB1ENR &= ~(1 << RCC_APB1ENR_DACEN);
+		RCC->APB1ENR &= ~(1 << RCC_APB1ENR_DACEN);
 }
 
 /*

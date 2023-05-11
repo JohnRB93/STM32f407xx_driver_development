@@ -97,11 +97,11 @@ typedef struct
 /********************************************************************************************************************/
 
 //Peripheral Clock Setup
-void SPI_PeriClockControl(SPI_RegDef_t *pSPIx, RCC_RegDef_t *pRCC, uint8_t EnOrDis);
+void SPI_PeriClockControl(SPI_RegDef_t *pSPIx, uint8_t EnOrDis);
 
 //Initialization and De-initialization
-void SPI_Init(SPI_Handle_t *pSPIHandle, RCC_RegDef_t *pRCC);
-void SPI_DeInit(SPI_RegDef_t *pSPIx, RCC_RegDef_t *pRCC);
+void SPI_Init(SPI_Handle_t *pSPIHandle);
+void SPI_DeInit(SPI_RegDef_t *pSPIx);
 
 //Data Send and Receive (Blocking, non-interrupt.)
 void SPI_SendData(SPI_RegDef_t *pSPIx, uint8_t *pTxBuffer, uint32_t Len);

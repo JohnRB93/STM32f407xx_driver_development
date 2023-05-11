@@ -68,7 +68,7 @@ void GPIO_Config(void)
 	analogPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_ANALOG;
 	analogPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_2;
-	GPIO_Init(&analogPin, rcc.pRCC);//PotRead
+	GPIO_Init(&analogPin);//PotRead
 
 	ledPin.pGPIOx = GPIOB;
 	ledPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_OUT;
@@ -76,13 +76,13 @@ void GPIO_Config(void)
 	ledPin.GPIO_PinConfig.GPIO_PinOPType = GPIO_OP_TYPE_PP;
 	ledPin.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
 	ledPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
-	GPIO_Init(&ledPin, rcc.pRCC);//Red Led Pin
+	GPIO_Init(&ledPin);//Red Led Pin
 
 	ledPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_14;
-	GPIO_Init(&ledPin, rcc.pRCC);//Yellow Led Pin
+	GPIO_Init(&ledPin);//Yellow Led Pin
 
 	ledPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_15;
-	GPIO_Init(&ledPin, rcc.pRCC);//Green Led Pin
+	GPIO_Init(&ledPin);//Green Led Pin
 }
 
 void ADC_Config(void)
@@ -96,7 +96,7 @@ void ADC_Config(void)
 	ADC_IN.ADC_Config.ADC_WtDgEnable = ADC_WATCHDOG_DISABLE;
 	ADC_IN.ADC_Config.ADC_DMAEnable = ADC_DMA_ENABLE;
 	ADC_IN.ADC_Config.ADC_ItEnable = ADC_INTERRUPT_ENABLE;
-	ADC_Init(&ADC_IN, rcc.pRCC);
+	ADC_Init(&ADC_IN);
 	ADC_ConfigSampRate(ADC_IN.pADCx, channels[0], ADC_084_CYCLES);
 	ADC_SelectEOCFlagTrigger(&ADC_IN);
 	ADC_IRQInterruptConfig(IRQ_NO_ADC, ENABLE);
@@ -122,7 +122,7 @@ void DMA_Config(void)
 	dma.DMA_Config.DMA_ItEnable.DMA_HTIE = DISABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_TCIE = ENABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_TEIE = ENABLE;
-	DMA_Init(&dma, rcc.pRCC);
+	DMA_Init(&dma);
 	DMA_ConfigStream(&dma, REQ_STREAM_0, (uint32_t)(ADC1_BASEADDR + 0x4C), (uint32_t)(pPotData), REQ_STR_CH_0);
 	DMA_IRQInterruptConfig(IRQ_NO_DMA2_STREAM0, ENABLE);
 }

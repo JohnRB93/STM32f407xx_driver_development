@@ -84,13 +84,13 @@ void GPIO_Config(void)
 	analogPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_ANALOG;
 	analogPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_HIGH;
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_6;
-	GPIO_Init(&analogPin, rcc.pRCC);//Potentiometor1 Input
+	GPIO_Init(&analogPin);//Potentiometor1 Input
 
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_7;
-	GPIO_Init(&analogPin, rcc.pRCC);//Potentiometor2 Input
+	GPIO_Init(&analogPin);//Potentiometor2 Input
 
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_5;
-	GPIO_Init(&analogPin, rcc.pRCC);//Photoresistor Input
+	GPIO_Init(&analogPin);//Photoresistor Input
 
 	//LED Outputs
 	ledPin.pGPIOx = GPIOB;
@@ -99,13 +99,13 @@ void GPIO_Config(void)
 	ledPin.GPIO_PinConfig.GPIO_PinOPType = GPIO_OP_TYPE_PP;
 	ledPin.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
 	ledPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
-	GPIO_Init(&ledPin, rcc.pRCC);//RedLedPin
+	GPIO_Init(&ledPin);//RedLedPin
 
 	ledPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_14;
-	GPIO_Init(&ledPin, rcc.pRCC);//YellowLedPin
+	GPIO_Init(&ledPin);//YellowLedPin
 
 	ledPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_15;
-	GPIO_Init(&ledPin, rcc.pRCC);//GreenLedPin
+	GPIO_Init(&ledPin);//GreenLedPin
 
 	//Button
 	buttonPin.pGPIOx = GPIOC;
@@ -113,7 +113,7 @@ void GPIO_Config(void)
 	buttonPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_IT_FT;
 	buttonPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
 	buttonPin.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
-	GPIO_Init(&buttonPin, rcc.pRCC);
+	GPIO_Init(&buttonPin);
 	GPIO_IRQPriorityConfig(IRQ_NO_EXTI15_10, NVIC_IRQ_PRIORITY15);
 	GPIO_IRQInterruptConfig(IRQ_NO_EXTI15_10, ENABLE);
 }
@@ -129,7 +129,7 @@ void ADC_Config(void)
 	ADC_IN.ADC_Config.ADC_WtDgEnable = ADC_WATCHDOG_DISABLE;
 	ADC_IN.ADC_Config.ADC_DMAEnable = ADC_DMA_ENABLE;
 	ADC_IN.ADC_Config.ADC_ItEnable = ADC_INTERRUPT_ENABLE;
-	ADC_Init(&ADC_IN, rcc.pRCC);
+	ADC_Init(&ADC_IN);
 	ADC_ChannelSelection(ADC_IN.pADCx, ADC_REGULAR_GROUP, ADC_03_CONVERSIONS, channels, 3);
 	ADC_ConfigSampRate(ADC_IN.pADCx, channels[0], ADC_480_CYCLES);
 	ADC_ConfigSampRate(ADC_IN.pADCx, channels[1], ADC_480_CYCLES);
@@ -162,7 +162,7 @@ void DMA_Config(void)
 	dma.DMA_Config.DMA_ItEnable.DMA_HTIE = DISABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_TCIE = ENABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_TEIE = ENABLE;
-	DMA_Init(&dma, rcc.pRCC);
+	DMA_Init(&dma);
 	DMA_ConfigStream(&dma, REQ_STREAM_2, (uint32_t)&ADC_IN.pADCx->DR, (uint32_t)(data), REQ_STR_CH_1);
 	DMA_IRQInterruptConfig(IRQ_NO_DMA2_STREAM2, ENABLE);
 }
@@ -184,19 +184,19 @@ void EXTI15_10_IRQHandler(void)
 }
 
 
-void ADC_ApplicationEventCallback(ADC_Handle_t *pADCHandle, uint8_t AppEv)
+void ADC_ApplicationEventCallback(uint8_t AppEv)
 {
 	if(AppEv == ADC_END_OF_CONVERSION_REG)
 	{
-		pADCHandle->ADC_status = ADC_OK;
+		ADC_IN.ADC_status = ADC_OK;
 	}
 	if(AppEv == ADC_OVERRUN_SET)
 	{
-		pADCHandle->ADC_status = ADC_OK;
+		ADC_IN.ADC_status = ADC_OK;
 	}
 }
 
-void DMA_ApplicationEventCallback(DMA_Handle_t *pDMAHandle, uint8_t AppEv, uint8_t reqStream)
+void DMA_ApplicationEventCallback(uint8_t AppEv, uint8_t reqStream)
 {
 	if(AppEv == DMA_HALF_TRANSFER_COMPLETE)
 	{
@@ -208,16 +208,16 @@ void DMA_ApplicationEventCallback(DMA_Handle_t *pDMAHandle, uint8_t AppEv, uint8
 	}
 	else if(AppEv == DMA_TRANSFER_ERROR)
 	{
-		DMA_ClearEN_Bit(pDMAHandle->pDMAx, reqStream);
+		DMA_ClearEN_Bit(dma.pDMAx, reqStream);
 		while(1);
 	}
 	else if(AppEv == DMA_DIRECT_ERROR)
 	{
-		DMA_ClearEN_Bit(pDMAHandle->pDMAx, reqStream);
+		DMA_ClearEN_Bit(dma.pDMAx, reqStream);
 		while(1);
 	}
 
-	pDMAHandle->DMA_status = DMA_OK;
+	dma.DMA_status = DMA_OK;
 }
 
 

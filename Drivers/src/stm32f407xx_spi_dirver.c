@@ -15,30 +15,29 @@ static void spi_ovr_error_interrupt_handle(SPI_Handle_t *pSPIHandle);
  * 				  given SPI register.
  *
  * @param[SPI_RegDef_t*]	- Base address of the SPI register.
- * @param[RCC_RegDef_t*]	- Base address of the RCC register.
  * @param[uint8_t]			- ENABLE or DISABLE macros.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void SPI_PeriClockControl(SPI_RegDef_t *pSPIx, RCC_RegDef_t *pRCC, uint8_t EnOrDis)
+void SPI_PeriClockControl(SPI_RegDef_t *pSPIx, uint8_t EnOrDis)
 {
 	if(EnOrDis == ENABLE) {
 		if(pSPIx == SPI1) {
-			pRCC->APB2ENR |= (1 << RCC_APB2ENR_SPI1EN);
+			RCC->APB2ENR |= (1 << RCC_APB2ENR_SPI1EN);
 		}else if(pSPIx == SPI2){
-			pRCC->APB1ENR |= (1 << RCC_APB1ENR_SPI2EN);
+			RCC->APB1ENR |= (1 << RCC_APB1ENR_SPI2EN);
 		}else if(pSPIx == SPI3){
-			pRCC->APB1ENR |= (1 << RCC_APB1ENR_SPI3EN);
+			RCC->APB1ENR |= (1 << RCC_APB1ENR_SPI3EN);
 		}
 	}else {
 		if(pSPIx == SPI1) {
-			pRCC->APB2ENR &= ~(1 << RCC_APB2ENR_SPI1EN);
+			RCC->APB2ENR &= ~(1 << RCC_APB2ENR_SPI1EN);
 		}else if(pSPIx == SPI2){
-			pRCC->APB1ENR &= ~(1 << RCC_APB1ENR_SPI2EN);
+			RCC->APB1ENR &= ~(1 << RCC_APB1ENR_SPI2EN);
 		}else if(pSPIx == SPI3){
-			pRCC->APB1ENR &= ~(1 << RCC_APB1ENR_SPI3EN);
+			RCC->APB1ENR &= ~(1 << RCC_APB1ENR_SPI3EN);
 		}
 	}
 }
@@ -52,18 +51,17 @@ void SPI_PeriClockControl(SPI_RegDef_t *pSPIx, RCC_RegDef_t *pRCC, uint8_t EnOrD
  * @brief		- This function initializes the SPI handle.
  *
  * @param[SPI_Handle_t*]	- Base address of the SPI handle.
- * @param[RCC_RegDef_t*]	- Base address of the RCC register.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void SPI_Init(SPI_Handle_t *pSPIHandle, RCC_RegDef_t *pRCC)
+void SPI_Init(SPI_Handle_t *pSPIHandle)
 {
 	uint32_t tempReg = 0;
 
 	//SPI Peripheral Clock Enable.
-	SPI_PeriClockControl(pSPIHandle->pSPIx, pRCC, ENABLE);
+	SPI_PeriClockControl(pSPIHandle->pSPIx, ENABLE);
 
 	//**Configure the SPI_CR1 register.
 
@@ -109,26 +107,25 @@ void SPI_Init(SPI_Handle_t *pSPIHandle, RCC_RegDef_t *pRCC)
  * @brief		- This function de-initializes the SPI handle.
  *
  * @param[SPI_RegDef_t*]	- Base address of the SPI register.
- * @param[RCC_RegDef_t*]	- Base address of the RCC register.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void SPI_DeInit(SPI_RegDef_t *pSPIx, RCC_RegDef_t *pRCC)
+void SPI_DeInit(SPI_RegDef_t *pSPIx)
 {
 	if(pSPIx == SPI1)
 	{
-		pRCC->APB2RSTR |= (1 << RCC_APB2RSTR_SPI1RST);
-		pRCC->APB2RSTR &= ~(1 << RCC_APB2RSTR_SPI1RST);
+		RCC->APB2RSTR |= (1 << RCC_APB2RSTR_SPI1RST);
+		RCC->APB2RSTR &= ~(1 << RCC_APB2RSTR_SPI1RST);
 	}else if(pSPIx == SPI2)
 	{
-		pRCC->APB1RSTR |= (1 << RCC_APB1RSTR_SPI2RST);
-		pRCC->APB1RSTR &= ~(1 << RCC_APB1RSTR_SPI2RST);
+		RCC->APB1RSTR |= (1 << RCC_APB1RSTR_SPI2RST);
+		RCC->APB1RSTR &= ~(1 << RCC_APB1RSTR_SPI2RST);
 	}else if(pSPIx == SPI3)
 	{
-		pRCC->APB1RSTR |= (1 << RCC_APB1RSTR_SPI3RST);
-		pRCC->APB1RSTR &= ~(1 << RCC_APB1RSTR_SPI3RST);
+		RCC->APB1RSTR |= (1 << RCC_APB1RSTR_SPI3RST);
+		RCC->APB1RSTR &= ~(1 << RCC_APB1RSTR_SPI3RST);
 	}
 }
 

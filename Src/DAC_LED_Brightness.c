@@ -58,10 +58,10 @@ void GPIO_Config(void)
 	analogPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_ANALOG;
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_1;
 	analogPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
-	GPIO_Init(&analogPin, rcc.pRCC);//ADC_IN/Potentiometor
+	GPIO_Init(&analogPin);//ADC_IN/Potentiometor
 
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_4;
-	GPIO_Init(&analogPin, rcc.pRCC);//ADC_OUT/Led
+	GPIO_Init(&analogPin);//ADC_OUT/Led
 }
 
 void DMA_Config(void)
@@ -83,7 +83,7 @@ void DMA_Config(void)
 	dma.DMA_Config.DMA_ItEnable.DMA_HTIE = DISABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_TCIE = ENABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_TEIE = ENABLE;
-	DMA_Init(&dma, rcc.pRCC);
+	DMA_Init(&dma);
 	DMA_ConfigStream(&dma, REQ_STREAM_0, (uint32_t)&adcIn.pADCx->DR, (uint32_t)&dataIn, REQ_STR_CH_0);
 	DMA_IRQInterruptConfig(IRQ_NO_DMA2_STREAM0, ENABLE);
 	DMA_ConfigInterrupts(&dma, REQ_STREAM_0);
@@ -102,7 +102,7 @@ void ADC_Config(void)
 	adcIn.ADC_Config.ADC_ItEnable = ADC_INTERRUPT_ENABLE;
 	adcIn.ADC_Config.ADC_DMAEnable = ADC_DMA_ENABLE;
 	adcIn.ADC_Config.ADC_WtDgEnable = ADC_WATCHDOG_DISABLE;
-	ADC_Init(&adcIn, rcc.pRCC);
+	ADC_Init(&adcIn);
 	ADC_ChannelSelection(adcIn.pADCx, adcIn.ADC_Config.ADC_ConvGroup, ADC_01_CONVERSIONS, &adcChannel, 1);
 	ADC_ConfigSampRate(adcIn.pADCx, adcChannel, adcIn.ADC_Config.ADC_SampTime);
 	ADC_IRQInterruptConfig(IRQ_NO_ADC, ENABLE);
@@ -116,7 +116,7 @@ void DAC_Config(void)
 	dacOut.DAC_Config.DAC_ChaX_OutBufEn = DAC_NO_CHA_OUT_BUF_EN;
 	dacOut.DAC_Config.DAC_Cha1_WaveGenEn = DAC_WAV_GEN_DI;
 	dacOut.DAC_Config.DAC_ChaX_DMA_En = DAC_DMA_DISABLE;
-	DAC_Init(&dacOut, rcc.pRCC);
+	DAC_Init(&dacOut);
 }
 
 

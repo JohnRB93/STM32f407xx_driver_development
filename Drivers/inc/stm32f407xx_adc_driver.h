@@ -193,9 +193,9 @@ typedef struct
 /*      For more information about the APIs check the function definitions             */
 /***************************************************************************************/
 
-void ADC_Init(ADC_Handle_t *pADC_Handle, RCC_RegDef_t *pRCC);
-void ADC_DeInit(RCC_RegDef_t *pRCC);
-void ADC_PeriClockControl(ADC_RegDef_t *pADCx, RCC_RegDef_t *pRCC, uint8_t EnOrDi);
+void ADC_Init(ADC_Handle_t *pADC_Handle);
+void ADC_DeInit(void);
+void ADC_PeriClockControl(ADC_RegDef_t *pADCx, uint8_t EnOrDi);
 void ADC_ChannelSelection(ADC_RegDef_t *pADCx, uint8_t convGroup, uint8_t conversions, uint8_t channels[], uint8_t length);
 void ADC_SetDisContNumber(ADC_RegDef_t *pADCx, uint8_t n);
 void ADC_ConfigSampRate(ADC_RegDef_t *pADCx, uint8_t channel, uint8_t cycles);

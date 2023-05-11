@@ -120,11 +120,11 @@ typedef struct
 void RCC_Config(RCC_Handle_t *RCC_Handle);
 uint8_t RCC_GetSysClkSwStatus(RCC_RegDef_t *pRCC);
 
-uint32_t RCC_GetPCLK1Value(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig);
-uint32_t RCC_GetPCLK2Value(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig);
+uint32_t RCC_GetPCLK1Value(RCC_Config_t rccConfig);
+uint32_t RCC_GetPCLK2Value(RCC_Config_t rccConfig);
 
 void RCC_ConfigPLLReg(RCC_RegDef_t *pRCC, RCC_PLL_Config_t PLL_Config);
-uint32_t RCC_GetPLLOutputClock(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig);
+uint32_t RCC_GetPLLOutputClock(RCC_Config_t rccConfig);
 
 void RCC_Enable(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig);
 

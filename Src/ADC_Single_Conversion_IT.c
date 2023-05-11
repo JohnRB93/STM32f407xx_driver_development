@@ -63,7 +63,7 @@ void GPIO_Config(void)
 	analogPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_ANALOG;
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_6;
 	analogPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
-	GPIO_Init(&analogPin, rcc.pRCC);
+	GPIO_Init(&analogPin);
 
 	ledPin.pGPIOx = GPIOB;
 	ledPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_OUT;
@@ -71,13 +71,13 @@ void GPIO_Config(void)
 	ledPin.GPIO_PinConfig.GPIO_PinOPType = GPIO_OP_TYPE_PP;
 	ledPin.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
 	ledPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
-	GPIO_Init(&ledPin, rcc.pRCC);
+	GPIO_Init(&ledPin);
 
 	ledPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_14;
-	GPIO_Init(&ledPin, rcc.pRCC);
+	GPIO_Init(&ledPin);
 
 	ledPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_15;
-	GPIO_Init(&ledPin, rcc.pRCC);
+	GPIO_Init(&ledPin);
 }
 
 void ADC_Config(void)
@@ -92,7 +92,7 @@ void ADC_Config(void)
 	ADC_IN.ADC_Config.ADC_ItEnable = ADC_INTERRUPT_ENABLE;
 	ADC_IN.ADC_Config.ADC_DMAEnable = ADC_DMA_DISABLE;
 	ADC_IN.ADC_Config.ADC_WtDgEnable = ADC_WATCHDOG_DISABLE;
-	ADC_Init(&ADC_IN, rcc.pRCC);
+	ADC_Init(&ADC_IN);
 	ADC_ChannelSelection(ADC_IN.pADCx, ADC_IN.ADC_Config.ADC_ConvGroup, ADC_01_CONVERSIONS, &channel, 1);
 	ADC_ConfigSampRate(ADC_IN.pADCx, channel, ADC_IN.ADC_Config.ADC_SampTime);
 	ADC_IRQInterruptConfig(IRQ_NO_ADC, ENABLE);
