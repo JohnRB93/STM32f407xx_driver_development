@@ -145,6 +145,8 @@
 
 //Base addresses of peripherals on the APB1 bus.
 #define DAC_BASEADDR						0x40007400U			/*Base Address of DAC Register*/
+#define TIM6_BASEADDR						0x40001000U			/*Base Address of TIM6 Register*/
+#define TIM7_BASEADDR						0x40001400U			/*Base Address of TIM7 Register*/
 #define SPI2_I2S2_BASEADDR					0x40003800U			/*Base Address of SPI2/I2S2 Registers*/
 #define SPI3_I2S3_BASEADDR					0x40003C00U			/*Base Address of SPI3/I2S3 Register*/
 #define USART2_BASEADDR						0x40004400U			/*Base Address of USART2 Register*/
@@ -170,7 +172,7 @@
 
 
 /*********************************************************************************************************************/
-/******************************************* Peripheral Structure Definitions ****************************************/
+/*********************************** Peripheral Register Structure Definitions ***************************************/
 /*********************************************************************************************************************/
 
 typedef struct
@@ -238,46 +240,6 @@ typedef struct
 	__vo uint32_t SSCGR;		/*RCC spread spectrum clock generation register	Address offset: 0x80*/
 	__vo uint32_t PLLI2SCFGR;	/*RCC PLLI2S configuration register				Address offset: 0x84*/
 }RCC_RegDef_t;
-
-//PLL Configuration Structure Definition
-typedef struct
-{
-	uint8_t PLL_M;		/* Division factor for the main PLL (PLL) and
-						 * audio PLL (PLLI2S) input clock.
-						 * 2 <= PLLM <= 63								*/
-
-	uint16_t PLL_N;		/* Main PLL (PLL) multiplication factor for VCO.
-						 * 50 <= PLLN <= 432							*/
-
-	uint8_t PLL_P;		/* Main PLL (PLL) division factor for main
-						 * system clock.
-						 * Possible values from @PLL_P					*/
-
-	uint8_t PLL_SRC;	/* Main PLL(PLL) and audio PLL (PLLI2S) entry
-						 * clock source.
-						 * Possible values from @PLL_SRC				*/
-
-	uint8_t PLL_Q;		/* Main PLL (PLL) division factor for USB OTG FS,
-						 * SDIO and random number generator.
-						 * 2 <= PLLQ <= 15								*/
-}RCC_PLL_Config_t;
-
-//RCC Configuration Structure Definition
-typedef struct
-{
-	uint8_t RCC_ClockSource;			//@RCC_ClockSource
-	uint32_t RCC_HSE_Frequency;			//4 - 26 MHz
-	uint8_t RCC_AHB_Prescaler;			//@AHB_Prescaler
-	uint8_t RCC_APB_LSPrescaler;		//@APB_LowSpeedPrescaler
-	uint8_t RCC_APB_HSPrescaler;		//@APB_HighSpeedPrescaler
-	uint8_t RCC_HSE_DivRTC;				//@HSE_DivisionFactorForRTC_Clock
-	uint8_t RCC_MCO1_ClkOut;			//@MicrocontrollerClockOutput1
-	uint8_t RCC_MCO2_ClkOut;			//@MicrocontrollerClockOutput2
-	uint8_t RCC_MCO1_Prescaler;			//@MicrocontrollerPrescaler
-	uint8_t RCC_MCO2_Prescaler;			//@MicrocontrollerPrescaler
-	uint8_t RCC_I2S_ClkSel;				//@I2S_ClockSelection
-	RCC_PLL_Config_t RCC_PLL_Config;
-}RCC_Config_t;
 
 typedef struct
 {
@@ -385,6 +347,25 @@ typedef struct
 }DAC_RegDef_t;
 
 typedef struct
+{	/*
+	 * The peripheral registers have to be written by half-words (16 bits) or words (32 bits).
+	 * Read-accesses can be done by bytes (8 bits), half-words (16 bits) or words (32 bits).
+	 */
+	__vo uint32_t CR1;			/*TIM6 and TIM7 control register 1				Address offset: 0x00*/
+	__vo uint32_t CR2;			/*TIM6 and TIM7 control register 2				Address offset: 0x04*/
+	uint32_t reserved1;			/*Reserved										Address offset: 0x08*/
+	__vo uint32_t DIER;			/*TIM6 and TIM7 DMA/Interrupt enable register	Address offset: 0x0C*/
+	__vo uint32_t SR;			/*TIM6 and TIM7 status register					Address offset: 0x10*/
+	__vo uint32_t EGR;			/*TIM6 and TIM7 event generation register		Address offset: 0x14*/
+	uint32_t reserved2;			/*Reserved										Address offset: 0x18*/
+	uint32_t reserved3;			/*Reserved										Address offset: 0x1C*/
+	uint32_t reserved4;			/*Reserved										Address offset: 0x20*/
+	__vo uint32_t CNT;			/*TIM6 and TIM7 counter							Address offset: 0x24*/
+	__vo uint32_t PSC;			/*TIM6 and TIM7 prescaler						Address offset: 0x28*/
+	__vo uint32_t ARR;			/*TIM6 and TIM7 auto-reload register			Address offset: 0x2C*/
+}TIM_6_7_RegDef_t;
+
+typedef struct
 {
 	__vo uint32_t SxCR;			/*DMA stream x configuration register
 									Address offset: 0x10 + 0x18 × stream number*/
@@ -448,6 +429,9 @@ typedef struct
 #define ADC3		((ADC_RegDef_t*)ADC3_BASEADDR)
 
 #define DAC			((DAC_RegDef_t*)DAC_BASEADDR)
+
+#define TIM6		((TIM_6_7_RegDef_t*)TIM6_BASEADDR)
+#define TIM7		((TIM_6_7_RegDef_t*)TIM7_BASEADDR)
 
 #define DMA1		((DMA_RegDef_t*)DMA1_BASEADDR)
 #define DMA2		((DMA_RegDef_t*)DMA2_BASEADDR)
@@ -552,6 +536,11 @@ typedef struct
 #define NVIC_IRQ_PRIORITY13		13
 #define NVIC_IRQ_PRIORITY14		14
 #define NVIC_IRQ_PRIORITY15		15
+
+
+/***** APIs for IRQ Configuration *****/
+void IRQInterruptConfig(uint8_t IRQNumber, uint8_t EnOrDi);
+void IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority);
 
 
 //Generic Macros
@@ -1288,6 +1277,25 @@ typedef struct
 
 
 /************************************************************************************************************************
+*               Bit Position Definitions of TIM_6_7x Peripherals                                                        *
+************************************************************************************************************************/
+
+//Bit position definitions for TIM_6_7_CR1
+#define TIM_6_7_CR1_CEN		0
+#define TIM_6_7_CR1_UDIS	1
+#define TIM_6_7_CR1_URS		2
+#define TIM_6_7_CR1_OPM		3
+#define TIM_6_7_CR1_ARPE	7
+
+//Bit position definitions for TIM_6_7_CR2
+#define TIM_6_7_CR2_MMS		4
+
+//Bit position definitions for TIM_6_7_DIER
+#define TIM_6_7_DIER_UIE	0
+#define TIM_6_7_DIER_UDE	8
+
+
+/************************************************************************************************************************
 *               Bit Position Definitions of I2Cx Peripherals                                                            *
 ************************************************************************************************************************/
 
@@ -1488,6 +1496,7 @@ typedef struct
 #include"stm32f407xx_adc_driver.h"
 #include"stm32f407xx_dma_driver.h"
 #include"stm32f407xx_dac_driver.h"
+#include"stm32f407xx_timer_driver.h"
 /*********************************************************/
 
 

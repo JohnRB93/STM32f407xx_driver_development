@@ -2,12 +2,12 @@
 
 uint16_t AHB_PreScaler[8] = {2, 4, 8, 16, 64, 128, 256, 512};
 uint8_t APBx_PreScaler[4] = {2, 4, 8, 16};
-
+uint32_t HSE_Clock = 0;
 
 
 /***************** Private Helper Function Headers *************************************/
 
-static void RCC_ConfigSysClk(RCC_RegDef_t *pRCC, uint8_t sysClk);
+static void RCC_ConfigSysClk(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig);
 static void RCC_ConfigAHB_Prescaler(RCC_RegDef_t *pRCC, uint8_t ahbPrescaler);
 static void RCC_ConfigAPB_LSpPrescaler(RCC_RegDef_t *pRCC, uint8_t apbLPrescaler);
 static void RCC_ConfigAPB_HSpPrescaler(RCC_RegDef_t *pRCC, uint8_t apbHPrescaler);
@@ -44,7 +44,7 @@ static void RCC_ConfigPLLSRC(RCC_RegDef_t *pRCC, uint8_t pllSrc);
  */
 void RCC_Config(RCC_Handle_t *RCC_Handle)
 {
-	RCC_ConfigSysClk(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_ClockSource);
+	RCC_ConfigSysClk(RCC_Handle->pRCC, RCC_Handle->RCC_Config);
 	RCC_ConfigAHB_Prescaler(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_AHB_Prescaler);
 	RCC_ConfigAPB_LSpPrescaler(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_APB_LSPrescaler);
 	RCC_ConfigAPB_HSpPrescaler(RCC_Handle->pRCC, RCC_Handle->RCC_Config.RCC_APB_HSPrescaler);
@@ -84,30 +84,33 @@ uint8_t RCC_GetSysClkSwStatus(RCC_RegDef_t *pRCC)
  *
  * @note		- None.
  */
-uint32_t RCC_GetPCLK1Value(RCC_Config_t rccConfig)
+uint32_t RCC_GetPCLK1Value(void)
 {
 	uint32_t systemClk;
-	uint8_t ahbp, apb1p;
+	uint8_t ahbp, apb1p, temp;
 
 	//Find System Clock.
-	if(rccConfig.RCC_ClockSource == RCC_SOURCE_HSI)
+	temp = ((RCC->CFGR >> RCC_CFGR_SWS0) & 0x3);
+	if(temp == RCC_SOURCE_HSI)
 		systemClk = _16MHZ;//System clock is HSI, 16MHz.
-	else if(rccConfig.RCC_ClockSource == RCC_SOURCE_HSE)
-		systemClk = rccConfig.RCC_HSE_Frequency;//System clock is HSE.
-	else if(rccConfig.RCC_ClockSource == RCC_SOURCE_PLL)
-		systemClk = RCC_GetPLLOutputClock(rccConfig);//System clock is PLL.
+	else if(temp == RCC_SOURCE_HSE)
+		systemClk = HSE_Clock;//System clock is HSE.
+	else if(temp == RCC_SOURCE_PLL)
+		systemClk = RCC_GetPLLOutputClock();//System clock is PLL.
 
 	//Find AHB Prescaler
-	if(rccConfig.RCC_AHB_Prescaler < RCC_AHB_DIV_002)
+	temp = ((RCC->CFGR >> RCC_CFGR_HPRE) & 0xf);
+	if(temp < RCC_AHB_DIV_002)
 		ahbp = 1;//System clock not divided
 	else
-		ahbp = AHB_PreScaler[rccConfig.RCC_AHB_Prescaler - 8];
+		ahbp = AHB_PreScaler[temp - 8];
 
 	//Find APB Low Speed Prescaler.
-	if(rccConfig.RCC_APB_LSPrescaler < RCC_AHB_DIV_02)
+	temp = ((RCC->CFGR >> RCC_CFGR_PPRE1) & 0x7);
+	if(temp < RCC_AHB_DIV_02)
 		apb1p = 1;//Quota from system clock and ahbp not divided
 	else
-		apb1p = APBx_PreScaler[rccConfig.RCC_APB_LSPrescaler - 4];
+		apb1p = APBx_PreScaler[temp - 4];
 
 	return ((systemClk / ahbp) / apb1p);
 }
@@ -123,30 +126,33 @@ uint32_t RCC_GetPCLK1Value(RCC_Config_t rccConfig)
  *
  * @note		- None.
  */
-uint32_t RCC_GetPCLK2Value(RCC_Config_t rccConfig)
+uint32_t RCC_GetPCLK2Value(void)
 {
 	uint32_t systemClk;
-	uint8_t ahbp, apb2p;
+	uint8_t ahbp, apb2p, temp;
 
 	//Find System Clock.
-	if(rccConfig.RCC_ClockSource == RCC_SOURCE_HSI)
+	temp = ((RCC->CFGR >> RCC_CFGR_SWS0) & 0x3);
+	if(temp == RCC_SOURCE_HSI)
 		systemClk = _16MHZ;//System clock is HSI, 16MHz.
-	else if(rccConfig.RCC_ClockSource == RCC_SOURCE_HSE)
-		systemClk = rccConfig.RCC_HSE_Frequency;//System clock is HSE.
-	else if(rccConfig.RCC_ClockSource == RCC_SOURCE_PLL)
-		systemClk = RCC_GetPLLOutputClock(rccConfig);//System clock is PLL.
+	else if(temp == RCC_SOURCE_HSE)
+		systemClk = HSE_Clock;//System clock is HSE.
+	else if(temp == RCC_SOURCE_PLL)
+		systemClk = RCC_GetPLLOutputClock();//System clock is PLL.
 
 	//Find AHB Prescaler
-	if(rccConfig.RCC_AHB_Prescaler < RCC_AHB_DIV_002)
+	temp = ((RCC->CFGR >> RCC_CFGR_HPRE) & 0xf);
+	if(temp < RCC_AHB_DIV_002)
 		ahbp = 1;//System clock not divided
 	else
-		ahbp = AHB_PreScaler[rccConfig.RCC_AHB_Prescaler - 8];
+		ahbp = AHB_PreScaler[temp - 8];
 
 	//Find APB High Speed Prescaler.
-	if(rccConfig.RCC_APB_HSPrescaler < RCC_AHB_DIV_02)
+	temp = ((RCC->CFGR >> RCC_CFGR_PPRE2) & 0x7);
+	if(temp < RCC_AHB_DIV_02)
 		apb2p = 1;//Quota from system clock and ahbp not divided
 	else
-		apb2p = APBx_PreScaler[rccConfig.RCC_APB_HSPrescaler - 4];
+		apb2p = APBx_PreScaler[temp - 4];
 
 	return ((systemClk / ahbp) / apb2p);
 }
@@ -197,24 +203,28 @@ void RCC_ConfigPLLReg(RCC_RegDef_t *pRCC, RCC_PLL_Config_t PLL_Config)
  * 				  (USB OTG FS, SDIO, RNG clock output) not yet
  * 				  implemented.
  */
-uint32_t RCC_GetPLLOutputClock(RCC_Config_t rccConfig)
+uint32_t RCC_GetPLLOutputClock(void)
 {
 	uint32_t vcoClk, pllClkInput;
-	uint8_t pllP;
+	uint16_t pllNTemp;
+	uint8_t pllP, temp;
 
-	switch(rccConfig.RCC_PLL_Config.PLL_SRC)
-	{
-		case PLL_SRC_HSI: pllClkInput = _16MHZ; break;
-		case PLL_SRC_HSE: pllClkInput = rccConfig.RCC_HSE_Frequency; break;
-	}
+	//Find PLL Clock Input.
+	temp = ((RCC->PLLCFGR >> RCC_PLLCFGR_PLLSRC) & 0x1);
+	pllClkInput = (temp == PLL_SRC_HSI) ? _16MHZ : HSE_Clock;
 
-	vcoClk = pllClkInput * (rccConfig.RCC_PLL_Config.PLL_N / rccConfig.RCC_PLL_Config.PLL_M);
+	//Find VCO Clock.
+	pllNTemp = ((RCC->PLLCFGR >> RCC_PLLCFGR_PLLN) & 0x1ff);//PLLN
+	temp = ((RCC->PLLCFGR >> RCC_PLLCFGR_PLLM0) & 0x3f);//PLLM
+	vcoClk = pllClkInput * (pllNTemp / temp);
 
-	if(((RCC->PLLCFGR >> RCC_PLLCFGR_PLLP0) & 0x3) == PLL_P_DIV_2)
+	//Find PLLP.
+	temp = ((RCC->PLLCFGR >> RCC_PLLCFGR_PLLP0) & 0x3);
+	if(temp == PLL_P_DIV_2)
 		pllP = 2;
-	else if(((RCC->PLLCFGR >> RCC_PLLCFGR_PLLP0) & 0x3) == PLL_P_DIV_4)
+	else if(temp == PLL_P_DIV_4)
 		pllP = 4;
-	else if(((RCC->PLLCFGR >> RCC_PLLCFGR_PLLP0) & 0x3) == PLL_P_DIV_6)
+	else if(temp == PLL_P_DIV_6)
 		pllP = 6;
 	else
 		pllP = 8;
@@ -267,22 +277,43 @@ void RCC_Enable(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
 	}
 }
 
+/*
+ * @fn			- RCC_ToggleLseClk
+ *
+ * @brief		- This function enables or disables the
+ * 				  LSE Clock.
+ *
+ * @param[uint8_t]			- ENABLE or DISABLE
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void RCC_ToggleLseClk(uint8_t EnOrDi)
+{
+	if(EnOrDi == ENABLE)
+		RCC->BDCR |= (1 << RCC_BDCR_LSEON);
+	else
+		RCC->BDCR &= ~(1 << RCC_BDCR_LSEON);
+}
+
 
 /***************************************************************************************/
 
 
 /***************** Private Helper Function Definitions *********************************/
 
-static void RCC_ConfigSysClk(RCC_RegDef_t *pRCC, uint8_t sysClk)
+static void RCC_ConfigSysClk(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig)
 {
-	if(sysClk == RCC_SOURCE_HSI)
+	if(rccConfig.RCC_ClockSource == RCC_SOURCE_HSI)
 	{//HSI will be the clock source.
 		pRCC->CFGR &= ~(0x3 << RCC_CFGR_SW0);
-	}else if(sysClk == RCC_SOURCE_HSE)
+	}else if(rccConfig.RCC_ClockSource == RCC_SOURCE_HSE)
 	{//HSE will be the clock source.
 		pRCC->CFGR &= ~(0x3 << RCC_CFGR_SW0);
 		pRCC->CFGR |= (1 << RCC_CFGR_SW0);
-	}else if(sysClk == RCC_SOURCE_PLL)
+		HSE_Clock = rccConfig.RCC_HSE_Frequency;
+	}else if(rccConfig.RCC_ClockSource == RCC_SOURCE_PLL)
 	{//PLL will be the clock source.
 		pRCC->CFGR &= ~(0x3 << RCC_CFGR_SW0);
 		pRCC->CFGR |= (1 << RCC_CFGR_SW1);

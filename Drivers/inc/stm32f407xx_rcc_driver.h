@@ -3,11 +3,47 @@
 
 #include"stm32f407xx.h"
 
-/***************** DMA Structure Definitions *******************************************/
+/***************** RCC Structure Definitions *******************************************/
 
+//PLL Configuration Structure Definition
+typedef struct
+{
+	uint8_t PLL_M;		/* Division factor for the main PLL (PLL) and
+						 * audio PLL (PLLI2S) input clock.
+						 * 2 <= PLLM <= 63								*/
 
+	uint16_t PLL_N;		/* Main PLL (PLL) multiplication factor for VCO.
+						 * 50 <= PLLN <= 432							*/
 
+	uint8_t PLL_P;		/* Main PLL (PLL) division factor for main
+						 * system clock.
+						 * Possible values from @PLL_P					*/
 
+	uint8_t PLL_SRC;	/* Main PLL(PLL) and audio PLL (PLLI2S) entry
+						 * clock source.
+						 * Possible values from @PLL_SRC				*/
+
+	uint8_t PLL_Q;		/* Main PLL (PLL) division factor for USB OTG FS,
+						 * SDIO and random number generator.
+						 * 2 <= PLLQ <= 15								*/
+}RCC_PLL_Config_t;
+
+//RCC Configuration Structure Definition
+typedef struct
+{
+	uint8_t RCC_ClockSource;			//@RCC_ClockSource
+	uint32_t RCC_HSE_Frequency;			//4 - 26 MHz
+	uint8_t RCC_AHB_Prescaler;			//@AHB_Prescaler
+	uint8_t RCC_APB_LSPrescaler;		//@APB_LowSpeedPrescaler
+	uint8_t RCC_APB_HSPrescaler;		//@APB_HighSpeedPrescaler
+	uint8_t RCC_HSE_DivRTC;				//@HSE_DivisionFactorForRTC_Clock
+	uint8_t RCC_MCO1_ClkOut;			//@MicrocontrollerClockOutput1
+	uint8_t RCC_MCO2_ClkOut;			//@MicrocontrollerClockOutput2
+	uint8_t RCC_MCO1_Prescaler;			//@MicrocontrollerPrescaler
+	uint8_t RCC_MCO2_Prescaler;			//@MicrocontrollerPrescaler
+	uint8_t RCC_I2S_ClkSel;				//@I2S_ClockSelection
+	RCC_PLL_Config_t RCC_PLL_Config;
+}RCC_Config_t;
 
 //RCC Handle Structure Definition
 typedef struct
@@ -120,12 +156,12 @@ typedef struct
 void RCC_Config(RCC_Handle_t *RCC_Handle);
 uint8_t RCC_GetSysClkSwStatus(RCC_RegDef_t *pRCC);
 
-uint32_t RCC_GetPCLK1Value(RCC_Config_t rccConfig);
-uint32_t RCC_GetPCLK2Value(RCC_Config_t rccConfig);
+uint32_t RCC_GetPCLK1Value(void);
+uint32_t RCC_GetPCLK2Value(void);
+uint32_t RCC_GetPLLOutputClock(void);
 
 void RCC_ConfigPLLReg(RCC_RegDef_t *pRCC, RCC_PLL_Config_t PLL_Config);
-uint32_t RCC_GetPLLOutputClock(RCC_Config_t rccConfig);
-
 void RCC_Enable(RCC_RegDef_t *pRCC, RCC_Config_t rccConfig);
+void RCC_ToggleLseClk(uint8_t EnOrDi);
 
 #endif /* INC_STM32F407XX_RCC_DRIVER_H_ */

@@ -89,7 +89,7 @@ typedef struct
 void I2C_PeriClockControl(I2C_RegDef_t *pI2Cx, uint8_t EnOrDi);
 
 //Initialization and De-initialization
-void I2C_Init(I2C_Handle_t *pI2CHandle, RCC_Config_t rccConfig);
+void I2C_Init(I2C_Handle_t *pI2CHandle);
 void I2C_DeInit(I2C_RegDef_t *pI2Cx);
 
 //Data Send and Receive

@@ -58,7 +58,7 @@ void USART_PeriClockControl(USART_RegDef_t *pUSARTx, uint8_t EnorDi)
  *
  * @note		- None.
  */
-void USART_Init(USART_Handle_t *pUSARTHandle, RCC_Config_t rccConfig)
+void USART_Init(USART_Handle_t *pUSARTHandle)
 {
 	uint32_t tempreg = 0;
 
@@ -130,7 +130,7 @@ void USART_Init(USART_Handle_t *pUSARTHandle, RCC_Config_t rccConfig)
 	pUSARTHandle->pUSARTx->CR3 = tempreg;
 
 	/*** Configuration of BRR(Baudrate register) ***/
-	USART_SetBaudRate(pUSARTHandle->pUSARTx, rccConfig, pUSARTHandle->USART_Config.USART_Baud);
+	USART_SetBaudRate(pUSARTHandle->pUSARTx, pUSARTHandle->USART_Config.USART_Baud);
 
 }
 
@@ -718,7 +718,7 @@ void USART_ClearFlag(USART_RegDef_t *pUSARTx, uint16_t StatusFlagName)
  *
  * @Note              - None.
  */
-void USART_SetBaudRate(USART_RegDef_t *pUSARTx, RCC_Config_t rccConfig, uint32_t BaudRate)
+void USART_SetBaudRate(USART_RegDef_t *pUSARTx, uint32_t BaudRate)
 {
 	//Variables to hold the APB clock, div, Mantissa and Fraction values.
 	uint32_t PCLKx, usartdiv, M_part, F_part;
@@ -727,10 +727,10 @@ void USART_SetBaudRate(USART_RegDef_t *pUSARTx, RCC_Config_t rccConfig, uint32_t
 	//Get the value of APB bus clock in to the variable PCLKx
 	if(pUSARTx == USART1 || pUSARTx == USART6)
 	{	//USART1 and USART6 are hanging on APB2 bus
-		PCLKx = RCC_GetPCLK2Value(rccConfig);
+		PCLKx = RCC_GetPCLK2Value();
 	}else
 	{	//USART1 and USART6 are hanging on APB1 bus
-		PCLKx = RCC_GetPCLK1Value(rccConfig);
+		PCLKx = RCC_GetPCLK1Value();
 	}
 
 	//Check for OVER8 configuration bit
