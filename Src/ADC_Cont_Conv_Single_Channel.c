@@ -17,18 +17,15 @@
 
 #define RED_LED_VALUE		245U
 #define YELLOW_LED_VALUE	15U
-#define POT_ADDR			(uint8_t*)0x20004010U
 
 /*
  * PA2 -> ADC_IN2  potentiometer
  */
-
-RCC_Handle_t rcc;
 ADC_Handle_t ADC_IN;
 DMA_Handle_t dma;
-GPIO_Handle_t analogPin, ledPin;
+
 uint8_t channels[] = {ADC_IN2};
-uint8_t *pPotData = POT_ADDR;
+uint8_t data = 0;
 
 void RCC_Setup(void);
 void GPIO_Config(void);
@@ -53,6 +50,8 @@ int main(void)
 
 void RCC_Setup(void)
 {
+	RCC_Handle_t rcc;
+
 	rcc.pRCC = RCC;
 	rcc.RCC_Config.RCC_ClockSource = RCC_SOURCE_HSI;
 	rcc.RCC_Config.RCC_AHB_Prescaler = 1;
@@ -64,6 +63,8 @@ void RCC_Setup(void)
 
 void GPIO_Config(void)
 {
+	GPIO_Handle_t analogPin, ledPin;
+
 	analogPin.pGPIOx = GPIOA;
 	analogPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_ANALOG;
 	analogPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
@@ -90,7 +91,7 @@ void ADC_Config(void)
 	ADC_IN.pADCx = ADC1;
 	ADC_IN.ADC_Config.ADC_BitRes = ADC_08BIT_RESOLUTION;
 	ADC_IN.ADC_Config.ADC_ClkPreSclr = ADC_PCLK_DIV2;
-	ADC_IN.ADC_Config.ADC_ConvMode = ADC_CONT_CONV_MODE;
+	ADC_IN.ADC_Config.ADC_ConvGroup = ADC_REGULAR_GROUP;
 	ADC_IN.ADC_Config.ADC_EOCSelect = ADC_END_OF_EACH;
 	ADC_IN.ADC_Config.ADC_DataAlign = ADC_DATA_ALIGNMENT_RIGHT;
 	ADC_IN.ADC_Config.ADC_WtDgEnable = ADC_WATCHDOG_DISABLE;
@@ -99,7 +100,7 @@ void ADC_Config(void)
 	ADC_Init(&ADC_IN);
 	ADC_ConfigSampRate(ADC_IN.pADCx, channels[0], ADC_084_CYCLES);
 	ADC_SelectEOCFlagTrigger(&ADC_IN);
-	ADC_IRQInterruptConfig(IRQ_NO_ADC, ENABLE);
+	IRQInterruptConfig(IRQ_NO_ADC, ENABLE);
 }
 
 void DMA_Config(void)
@@ -123,8 +124,8 @@ void DMA_Config(void)
 	dma.DMA_Config.DMA_ItEnable.DMA_TCIE = ENABLE;
 	dma.DMA_Config.DMA_ItEnable.DMA_TEIE = ENABLE;
 	DMA_Init(&dma);
-	DMA_ConfigStream(&dma, REQ_STREAM_0, (uint32_t)(ADC1_BASEADDR + 0x4C), (uint32_t)(pPotData), REQ_STR_CH_0);
-	DMA_IRQInterruptConfig(IRQ_NO_DMA2_STREAM0, ENABLE);
+	DMA_ConfigStream(&dma, REQ_STREAM_0, (uint32_t)(ADC1_BASEADDR + 0x4C), (uint32_t)(&data), REQ_STR_CH_0);
+	IRQInterruptConfig(IRQ_NO_DMA2_STREAM0, ENABLE);
 }
 
 
@@ -136,11 +137,6 @@ void ADC_IRQHandler(void)
 void DMA2_Stream0_IRQHandler(void)
 {
 	DMA2_Stream0_IRQHandling(&dma);
-}
-
-void DMA2_Stream4_IRQHandler(void)
-{
-	DMA2_Stream4_IRQHandling(&dma);
 }
 
 
@@ -156,7 +152,7 @@ void DMA_ApplicationEventCallback(uint8_t AppEv, uint8_t reqStream)
 {
 	if(AppEv == DMA_TRANSFER_COMPLETE)
 	{
-		uint8_t temp = *pPotData;
+		uint8_t temp = data;
 		printf("Potentiometer Data = %u\n", temp);
 		if(temp >= RED_LED_VALUE)
 		{

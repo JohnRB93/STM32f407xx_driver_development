@@ -289,72 +289,6 @@ uint8_t SPI_ReceiveDataIT(SPI_Handle_t *pSPIHandle, __vo uint8_t *pRxBuffer, uin
 /*********************IRQ Configuration and ISR Handling***************************/
 
 /*
- * @fn			- SPI_IRQInterruptConfig
- *
- * @brief		- This function configures the SPI IRQ Interrupt.
- *
- * @param[uint8_t]	- IRQ Number.
- * @param[uint8_t]	- ENABLE or DISABLE macro.
- *
- * @return		- None.
- *
- * @note		- None.
- */
-void SPI_IRQInterruptConfig(uint8_t IRQNumber, uint8_t EnOrDI)
-{
-	if(EnOrDI == ENABLE)
-	{
-		if(IRQNumber <= 31)
-		{//Program ISER0 register.
-			*NVIC_ISER0 |= (1 << IRQNumber);
-
-		}else if(IRQNumber > 31 && IRQNumber < 64)
-		{//Program ISER1 register.
-			*NVIC_ISER1 |= (1 << IRQNumber % 32);
-
-		}else if(IRQNumber >= 64 && IRQNumber < 96)
-		{//Program ISER2 register.
-			*NVIC_ISER3 |= (1 << IRQNumber % 64);
-		}
-	}else
-	{
-		if(IRQNumber <= 31)
-		{//Program ICER0 register.
-			*NVIC_ICER0 |= (1 << IRQNumber);
-
-		}else if(IRQNumber > 31 && IRQNumber < 64)
-		{//Program ICER1 register.
-			*NVIC_ICER1 |= (1 << IRQNumber % 32);
-
-		}else if(IRQNumber >= 64 && IRQNumber < 96)
-		{//Program ICER2 register.
-			*NVIC_ICER3 |= (1 << IRQNumber % 64);
-		}
-	}
-}
-
-/*
- * @fn			- SPI_IRQPriorityConfig
- *
- * @brief		- This function configures the SPI IRQ Priority.
- *
- * @param[uint8_t]	- IRQ Number.
- * @param[uint8_t]	- IRQ Priority.
- *
- * @return		- None.
- *
- * @note		- None.
- */
-void SPI_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority)
-{
-	//Find out IPR register.
-	uint8_t iprx = IRQNumber / 4;
-	uint8_t iprx_section = IRQNumber % 4;
-	uint8_t shift_amount = (8 * iprx_section) + (8 - NO_PR_BITS_IMPLEMENTED);
-	*(NVIC_PR_BASEADDR + iprx) |= (IRQPriority << shift_amount);
-}
-
-/*
  * @fn			- SPI_IRQHandling
  *
  * @brief		- This function configures the SPI IRQ.
@@ -394,6 +328,9 @@ void SPI_IRQHandling(SPI_Handle_t *pSPIHandle)
 		spi_ovr_error_interrupt_handle(pSPIHandle);
 	}
 }
+
+/* Weak function that can be implemented in user application. */
+__weak void SPI_ApplicationEventCallback(SPI_Handle_t *pSPIHandle, uint8_t AppEv) {}
 
 
 /*********************Other Peripheral Control APIs********************************/
@@ -527,23 +464,6 @@ void SPI_ClearOVRFlag(SPI_RegDef_t *pSPIx)
 	(void)temp;
 }
 
-
-/********************* Application Callbacks **************************************/
-
-/*
- * @fn			- SPI_ApplicationEventCallback
- *
- * @brief		- Weak implementation that may be overriden by the
- * 				  user application.
- *
- * @param[SPI_Handle_t]	- Base address of the SPI Handle.
- * @param[uint8_t]		- Application Event Macro.
- *
- * @return		- None.
- *
- * @note		- None.
- */
-__weak void SPI_ApplicationEventCallback(SPI_Handle_t *pSPIHandle, uint8_t AppEv) {}
 
 
 /********************* Helper Function Implementations ****************************/

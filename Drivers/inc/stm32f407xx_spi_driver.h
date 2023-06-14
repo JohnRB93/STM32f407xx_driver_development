@@ -111,10 +111,7 @@ void SPI_ReceiveData(SPI_RegDef_t *pSPIx, uint8_t *pRxBuffer, uint32_t Len);
 uint8_t SPI_SendDataIT(SPI_Handle_t *pSPIHandle, uint8_t *pTxBuffer, uint32_t Len);
 uint8_t SPI_ReceiveDataIT(SPI_Handle_t *pSPIHandle, __vo uint8_t *pRxBuffer, uint32_t Len);
 
-//IRQ Configuration and ISR Handling
-void SPI_IRQInterruptConfig(uint8_t IRQNumber, uint8_t EnOrDI);
-void SPI_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority);
-void SPI_IRQHandling(SPI_Handle_t *pSPIHandle);
+
 
 //Other Peripheral Control APIs
 void SPI_PeripheralControl(SPI_RegDef_t *pSPIx, uint8_t EnOrDi);
@@ -125,7 +122,8 @@ void SPI_ClearOVRFlag(SPI_RegDef_t *pSPIx);
 void SPI_CloseTransmission(SPI_Handle_t *pSPIHandle);
 void SPI_CloseReception(SPI_Handle_t *pSPIHandle);
 
-//Application Callback
+//IRQ Handling
+void SPI_IRQHandling(SPI_Handle_t *pSPIHandle);
 void SPI_ApplicationEventCallback(SPI_Handle_t *pSPIHandle, uint8_t AppEv);
 
 

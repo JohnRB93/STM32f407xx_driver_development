@@ -21,9 +21,7 @@
 #define RG ADC_REGULAR_GROUP
 #define IG ADC_INJECTED_GROUP
 
-RCC_Handle_t rcc;
 ADC_Handle_t ADC_IN;
-GPIO_Handle_t analogPin, ledPin;
 
 uint16_t data;
 uint8_t channel = ADC_IN6;/*PA6*/
@@ -48,6 +46,8 @@ int main(void)
 
 void RCC_Setup(void)
 {
+	RCC_Handle_t rcc;
+
 	rcc.pRCC = RCC;
 	rcc.RCC_Config.RCC_ClockSource = RCC_SOURCE_HSI;
 	rcc.RCC_Config.RCC_AHB_Prescaler = 1;
@@ -59,6 +59,8 @@ void RCC_Setup(void)
 
 void GPIO_Config(void)
 {
+	GPIO_Handle_t analogPin, ledPin;
+
 	analogPin.pGPIOx = GPIOA;
 	analogPin.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_ANALOG;
 	analogPin.GPIO_PinConfig.GPIO_PinNumber = GPIO_PIN_NO_6;
@@ -95,7 +97,7 @@ void ADC_Config(void)
 	ADC_Init(&ADC_IN);
 	ADC_ChannelSelection(ADC_IN.pADCx, ADC_IN.ADC_Config.ADC_ConvGroup, ADC_01_CONVERSIONS, &channel, 1);
 	ADC_ConfigSampRate(ADC_IN.pADCx, channel, ADC_IN.ADC_Config.ADC_SampTime);
-	ADC_IRQInterruptConfig(IRQ_NO_ADC, ENABLE);
+	IRQInterruptConfig(IRQ_NO_ADC, ENABLE);
 }
 
 void delay(void)
@@ -108,7 +110,7 @@ void ADC_IRQHandler(void)
 	ADC_IRQHandling(&ADC_IN);
 }
 
-void ADC_ApplicationEventCallback(ADC_Handle_t *pADCHandle, uint8_t AppEv)
+void ADC_ApplicationEventCallback(uint8_t AppEv)
 {
 	if(AppEv == ADC_END_OF_CONVERSION_REG || AppEv == ADC_END_OF_CONVERSION_INJ)
 	{
@@ -120,21 +122,21 @@ void ADC_ApplicationEventCallback(ADC_Handle_t *pADCHandle, uint8_t AppEv)
 		printf("Data = %d\n", data);
 		if(data >= 245)
 		{
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_13, 1);
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_14, 0);
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_15, 0);
+			GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_13, 1);
+			GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_14, 0);
+			GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_15, 0);
 		}
 		else if(data < 245 && data > 15)
 		{
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_13, 0);
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_14, 1);
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_15, 0);
+			GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_13, 0);
+			GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_14, 1);
+			GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_15, 0);
 		}
 		else
 		{
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_13, 0);
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_14, 0);
-			GPIO_WriteToOutputPin(ledPin.pGPIOx, GPIO_PIN_NO_15, 1);
+			GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_13, 0);
+			GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_14, 0);
+			GPIO_WriteToOutputPin(GPIOB, GPIO_PIN_NO_15, 1);
 		}
 
 		ADC_StartConversion(ADC_IN.pADCx, ADC_IN.ADC_Config.ADC_ConvGroup, ADC_SINL_CONV_MODE);
@@ -145,5 +147,5 @@ void ADC_ApplicationEventCallback(ADC_Handle_t *pADCHandle, uint8_t AppEv)
 		ADC_StartConversion(ADC_IN.pADCx, ADC_IN.ADC_Config.ADC_ConvGroup, ADC_SINL_CONV_MODE);
 	}
 	delay();
-	pADCHandle->ADC_status = ADC_OK;
+	ADC_IN.ADC_status = ADC_OK;
 }

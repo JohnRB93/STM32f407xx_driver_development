@@ -201,7 +201,7 @@ typedef struct
 typedef struct
 {
 	__vo uint32_t CR;			/*RCC clock control register					Address offset: 0x00*/
-	__vo uint32_t PLLCFGR;			/*RCC PLL configuration register				Address offset: 0x04*/
+	__vo uint32_t PLLCFGR;		/*RCC PLL configuration register				Address offset: 0x04*/
 	__vo uint32_t CFGR;			/*RCC clock configuration register				Address offset: 0x08*/
 	__vo uint32_t CIR;			/*RCC clock interrupt register					Address offset: 0x0C*/
 	__vo uint32_t AHB1RSTR;		/*RCC AHB1 peripheral reset register			Address offset: 0x10*/

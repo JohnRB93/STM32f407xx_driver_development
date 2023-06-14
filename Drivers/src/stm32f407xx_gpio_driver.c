@@ -297,72 +297,43 @@ void GPIO_ToggleOutputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber)
 	pGPIOx->ODR ^= (1 << PinNumber);
 }
 
-
-/*********************IRQ Configuration and ISR handling***************************/
 /*
- * @fn			- GPIO_IRQInterruptConfig
+ * @fn			- GPIO_LockRegister
  *
- * @brief		- This function configures the GPIO IRQ.
+ * @brief		- This function Locks the port pin configuration
+ * 				  until the peripheral or the MCU is reset.
  *
- * @param[in]	- IRQ Number.
- * @param[in]	- ENABLE or DISABLE macros.
+ * @param[GPIO_RegDef_t*]	- Base address of the GPIOx port register.
+ * @param[uint8_t*]			- An array of pins to be locked.
+ * @param[uint8_t]			- Length of array.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void GPIO_IRQInterruptConfig(uint8_t IRQNumber, uint8_t EnOrDI)
+void GPIO_LockRegister(GPIO_RegDef_t *pGPIOx, uint8_t *PinNumber, uint8_t length)
 {
-	if(EnOrDI == ENABLE)
+	if(((pGPIOx->LCKR >> 16) & 0x1) == RESET)
 	{
-		if(IRQNumber <= 31)
-		{//Program ISER0 register.
-			*NVIC_ISER0 |= (1 << IRQNumber);
-
-		}else if(IRQNumber > 31 && IRQNumber < 64)
-		{//Program ISER1 register.
-			*NVIC_ISER1 |= (1 << IRQNumber % 32);
-
-		}else if(IRQNumber >= 64 && IRQNumber < 96)
-		{//Program ISER2 register.
-			*NVIC_ISER3 |= (1 << IRQNumber % 64);
+		uint32_t pins = 0;
+		for(uint8_t i = 0; i < length; i++)
+		{
+			pins |= (1 << *PinNumber);
+			if(!(i + 1 == length))
+				PinNumber++;
 		}
-	}else
-	{
-		if(IRQNumber <= 31)
-		{//Program ICER0 register.
-			*NVIC_ICER0 |= (1 << IRQNumber);
-
-		}else if(IRQNumber > 31 && IRQNumber < 64)
-		{//Program ICER1 register.
-			*NVIC_ICER1 |= (1 << IRQNumber % 32);
-
-		}else if(IRQNumber >= 64 && IRQNumber < 96)
-		{//Program ICER2 register.
-			*NVIC_ICER3 |= (1 << IRQNumber % 64);
-		}
+		pGPIOx->LCKR = pins;
+		//Lock Sequence.
+		pGPIOx->LCKR = (uint32_t)((pGPIOx->LCKR | (1 << 16)) + ((pGPIOx->LCKR >> 15) & 0xf));
+		pGPIOx->LCKR = (uint32_t)((pGPIOx->LCKR & ~(1 << 16)) + ((pGPIOx->LCKR >> 15) & 0xf));
+		pGPIOx->LCKR = (uint32_t)((pGPIOx->LCKR | (1 << 16)) + ((pGPIOx->LCKR >> 15) & 0xf));
+		pGPIOx->LCKR;
+		while(!((pGPIOx->LCKR >> 16) & 0x1));
 	}
 }
 
-/*
- * @fn			- GPIO_IRQPriorityConfig
- *
- * @brief		- This function handles IRQ Priority configuration.
- *
- * @param[in]	- Priority of the IRQ.
- *
- * @return		- None.
- *
- * @note		- None.
- */
-void GPIO_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority)
-{
-	//Find out IPR register.
-	uint8_t iprx = IRQNumber / 4;
-	uint8_t iprx_section = IRQNumber % 4;
-	uint8_t shift_amount = (8 * iprx_section) + (8 - NO_PR_BITS_IMPLEMENTED);
-	*(NVIC_PR_BASEADDR + iprx) |= (IRQPriority << shift_amount);
-}
+
+/*********************IRQ Configuration and ISR handling***************************/
 
 /*
  * @fn			- GPIO_IRQHandling
@@ -383,3 +354,6 @@ void GPIO_IRQHandling(uint8_t PinNumber)
 		EXTI->PR |= (1 << PinNumber);
 	}
 }
+
+/* Weak function that can be implemented in user application. */
+void __weak GPIO_ApplicationEventCallBack(uint8_t appEv) {}

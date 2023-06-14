@@ -652,72 +652,6 @@ uint8_t I2C_SlaveReceiveData(I2C_RegDef_t *pI2Cx)
 /*********************IRQ Configuration and ISR Handling***************************/
 
 /*
- * @fn			- I2C_IRQInterruptConfig
- *
- * @brief		- This function configures the I2C IRQ Interrupt.
- *
- * @param[uint8_t]	- IRQ Number.
- * @param[uint8_t]	- ENABLE or DISABLE macro.
- *
- * @return		- None.
- *
- * @note		- None.
- */
-void I2C_IRQInterruptConfig(uint8_t IRQNumber, uint8_t EnOrDi)
-{
-	if(EnOrDi == ENABLE)
-	{
-		if(IRQNumber <= 31)
-		{//Program ISER0 register.
-			*NVIC_ISER0 |= (1 << IRQNumber);
-
-		}else if(IRQNumber > 31 && IRQNumber < 64)
-		{//Program ISER1 register.
-			*NVIC_ISER1 |= (1 << IRQNumber % 32);
-
-		}else if(IRQNumber >= 64 && IRQNumber < 96)
-		{//Program ISER2 register.
-			*NVIC_ISER3 |= (1 << IRQNumber % 64);
-		}
-	}else
-	{
-		if(IRQNumber <= 31)
-		{//Program ICER0 register.
-			*NVIC_ICER0 |= (1 << IRQNumber);
-
-		}else if(IRQNumber > 31 && IRQNumber < 64)
-		{//Program ICER1 register.
-			*NVIC_ICER1 |= (1 << IRQNumber % 32);
-
-		}else if(IRQNumber >= 64 && IRQNumber < 96)
-		{//Program ICER2 register.
-			*NVIC_ICER3 |= (1 << IRQNumber % 64);
-		}
-	}
-}
-
-/*
- * @fn			- I2C_IRQPriorityConfig
- *
- * @brief		- This function configures the I2C IRQ Priority.
- *
- * @param[uint8_t]	- IRQ Number.
- * @param[uint8_t]	- IRQ Priority.
- *
- * @return		- None.
- *
- * @note		- None.
- */
-void I2C_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority)
-{
-	//Find out IPR register.
-	uint8_t iprx = IRQNumber / 4;
-	uint8_t iprx_section = IRQNumber % 4;
-	uint8_t shift_amount = (8 * iprx_section) + (8 - NO_PR_BITS_IMPLEMENTED);
-	*(NVIC_PR_BASEADDR + iprx) |= (IRQPriority << shift_amount);
-}
-
-/*
  * @fn			- I2C_EV_IRQHandling
  *
  * @brief		- This function configures the I2C IRQ Event Handling.
@@ -909,6 +843,9 @@ void I2C_ER_IRQHandling(I2C_Handle_t *pI2CHandle)
 		I2C_ApplicationEventCallback(pI2CHandle,I2C_ERROR_TIMEOUT);
 	}
 }
+
+/* Weak function that can be implemented in user application. */
+void __weak I2C_ApplicaionEventCallback(I2C_Handle_t *pI2CHandle, uint8_t AppEv){}
 
 
 /*********************Other Peripheral Control APIs********************************/

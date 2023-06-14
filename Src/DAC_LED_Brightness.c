@@ -10,10 +10,10 @@
 #include <stdio.h>
 #include"stm32f407xx.h"
 
-RCC_Handle_t rcc;
+
 DMA_Handle_t dma;
 ADC_Handle_t adcIn;
-DAC_Handle_t dacOut;
+
 
 uint16_t dataIn;
 uint8_t adcChannel = ADC_IN1;//PA1
@@ -41,6 +41,8 @@ int main(void)
 
 void RCC_Setup(void)
 {
+	RCC_Handle_t rcc;
+
 	rcc.pRCC = RCC;
 	rcc.RCC_Config.RCC_ClockSource = RCC_SOURCE_HSI;
 	rcc.RCC_Config.RCC_AHB_Prescaler = 1;
@@ -85,7 +87,7 @@ void DMA_Config(void)
 	dma.DMA_Config.DMA_ItEnable.DMA_TEIE = ENABLE;
 	DMA_Init(&dma);
 	DMA_ConfigStream(&dma, REQ_STREAM_0, (uint32_t)&adcIn.pADCx->DR, (uint32_t)&dataIn, REQ_STR_CH_0);
-	DMA_IRQInterruptConfig(IRQ_NO_DMA2_STREAM0, ENABLE);
+	IRQInterruptConfig(IRQ_NO_DMA2_STREAM0, ENABLE);
 	DMA_ConfigInterrupts(&dma, REQ_STREAM_0);
 
 }
@@ -105,11 +107,13 @@ void ADC_Config(void)
 	ADC_Init(&adcIn);
 	ADC_ChannelSelection(adcIn.pADCx, adcIn.ADC_Config.ADC_ConvGroup, ADC_01_CONVERSIONS, &adcChannel, 1);
 	ADC_ConfigSampRate(adcIn.pADCx, adcChannel, adcIn.ADC_Config.ADC_SampTime);
-	ADC_IRQInterruptConfig(IRQ_NO_ADC, ENABLE);
+	IRQInterruptConfig(IRQ_NO_ADC, ENABLE);
 }
 
 void DAC_Config(void)
 {
+	DAC_Handle_t dacOut;
+
 	dacOut.pDAC = DAC;
 	dacOut.DAC_Config.DAC_ChaSelect = DAC_CHANNEL_1;
 	dacOut.DAC_Config.DAC_ChaX_TrigEn = DAC_CHA_1_2_TRIG_DI;
@@ -135,7 +139,7 @@ void DMA_ApplicationEventCallback(uint8_t AppEv, uint8_t reqStream)
 {
 	if(AppEv == DMA_TRANSFER_COMPLETE)
 	{
-		DAC_Load12BitDataLeftAlign(dacOut.pDAC, DAC_CHANNEL_1, dataIn);
+		DAC_Load12BitDataLeftAlign(DAC, DAC_CHANNEL_1, dataIn);
 	}
 	else if(AppEv == DMA_TRANSFER_ERROR)
 	{

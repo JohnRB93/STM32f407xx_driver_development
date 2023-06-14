@@ -213,11 +213,7 @@ void ADC_SelectExtEvReg(ADC_RegDef_t *pADCx, uint8_t group, uint8_t event);
 
 void ADC_SelectWatchDogChannel(ADC_RegDef_t *pADCx, uint8_t channel);
 
-void ADC_IRQInterruptConfig(uint8_t IRQNumber, uint8_t EnOrDi);
-void ADC_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority);
-void ADC_IRQHandler(void);
 void ADC_IRQHandling(ADC_Handle_t *ADC_Handle);
-
 void ADC_ApplicationEventCallback(uint8_t AppEv);
 
 /***************************************************************************************/

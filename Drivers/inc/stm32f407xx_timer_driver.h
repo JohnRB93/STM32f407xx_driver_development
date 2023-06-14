@@ -95,8 +95,10 @@ uint8_t TIM67_ReadUpdateItFlag(TIM_6_7_RegDef_t *pTIM67x);
 void TIM67_ClearUpdateItFlag(TIM_6_7_RegDef_t *pTIM67x);
 void TIM67_GenerateUpdateEv(TIM_6_7_RegDef_t *pTIM67x);
 
-void TIM7_IRQHandling(TIM_6_7_RegDef_t *pTIM67x);
+void TIM67_Delay_ms(TIM_6_7_RegDef_t *pTIM67x, uint16_t ms);
+void TIM67_Delay_us(TIM_6_7_RegDef_t *pTIM67x, uint16_t us);
 
+void TIM7_IRQHandling(TIM_6_7_RegDef_t *pTIM67x);
 void TIM67_ApplicaionEventCallback(uint8_t appEv);
 
 #endif /* INC_STM32F407XX_TIMER_DRIVER_H_ */

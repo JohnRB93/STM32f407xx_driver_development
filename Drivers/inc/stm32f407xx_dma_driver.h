@@ -143,9 +143,6 @@ void DMA_ActivateStream(DMA_RegDef_t *pDMAx, uint8_t reqStream);
 void DMA_ClearEN_Bit(DMA_RegDef_t *pDMAx, uint8_t reqStream);
 void DMA_ConfigInterrupts(DMA_Handle_t *DMA_Handle, uint8_t reqStream);
 
-void DMA_IRQInterruptConfig(uint8_t IRQNumber, uint8_t EnOrDi);
-void DMA_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority);
-
 void DMA1_Stream0_IRQHandler(void);
 void DMA1_Stream1_IRQHandler(void);
 void DMA1_Stream2_IRQHandler(void);

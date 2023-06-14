@@ -1,5 +1,6 @@
 #include"stm32f407xx_timer_driver.h"
 
+
 /***************** Private Helper Function Headers *************************************/
 
 static void TIM67_ConfigCR1(TIM_6_7_RegDef_t *pTIM67x, TIM_6_7_Config_t tim67Config);
@@ -21,7 +22,7 @@ static void TIM67_ConfigUpdateIt(TIM_6_7_RegDef_t *pTIM67x, uint8_t itUpdate);
  * @param[TIM_6_7_Handle_t*]	- Base address of the TIM_6_7 handle.
  * @param[uint16_t]				- Value to set the counter to.
  * @param[uint16_t]				- Value to set the auto-reload to.
- * @param[uint16_t]				- Value to set the prescaler to(0 to 65535).
+ * @param[uint16_t]				- Value to set the prescaler to(1 to 65536).
  *
  * @return		- None.
  *
@@ -37,6 +38,7 @@ void TIM67_Init(TIM_6_7_Handle_t *pTIM67Handle, uint16_t counter, uint16_t autoR
 	TIM67_SetCounter(pTIM67Handle->pTIMx, counter);
 	TIM67_SetAutoReload(pTIM67Handle->pTIMx, autoReload);
 	TIM67_SetPrescaler(pTIM67Handle->pTIMx, prescaler-1);
+	while(!(TIM67_ReadUpdateItFlag(pTIM67Handle->pTIMx)));
 }
 
 /*
@@ -124,7 +126,7 @@ void TIM67_SetCounter(TIM_6_7_RegDef_t *pTIM67x, uint16_t count)
  *
  * @return		- None.
  *
- * @note		- Value can range from 1 to 65536.
+ * @note		- Value can range from 0 to 65535.
  */
 void TIM67_SetPrescaler(TIM_6_7_RegDef_t *pTIM67x, uint16_t preScaler)
 {
@@ -205,10 +207,59 @@ void TIM67_GenerateUpdateEv(TIM_6_7_RegDef_t *pTIM67x)
 	pTIM67x->EGR = (uint16_t)0x1;
 }
 
+/*
+ * @fn			- TIM67_Delay_ms
+ *
+ * @brief		- This function creates a delay for x miliseconds
+ * 				  depending on the values passed in the second
+ * 				  parameter.
+ *
+ * @param[TIM_6_7_RegDef_t*]	- Base address of the TIM_6_7 register.
+ * @param[uint32_t]				- Number of miliseconds to delay by.
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void TIM67_Delay_ms(TIM_6_7_RegDef_t *pTIM67x, uint16_t ms)
+{
+	for(uint32_t i = 0; i < ms; i++)
+		TIM67_Delay_us(pTIM67x, 1000);
+}
+
+/*
+ * @fn			- TIM67_Delay_us
+ *
+ * @brief		- This function creates a delay for x microseconds
+ * 				  depending on the value passed in the second
+ * 				  argument.
+ *
+ * @param[TIM_6_7_RegDef_t*]	- Base address of the TIM_6_7 register.
+ * @param[uint32_t]				- Number of microseconds to delay by.
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void TIM67_Delay_us(TIM_6_7_RegDef_t *pTIM67x, uint16_t us)
+{
+	pTIM67x->CNT = 0;
+	while(pTIM67x->CNT < us);
+}
+
 /***************************************************************************************/
 
 
 /***************** TIMx IRQ Handling ***************************************************/
+
+void TIM6_IRQHandling(TIM_6_7_RegDef_t *pTIM67x)
+{
+	if(TIM67_ReadUpdateItFlag(pTIM67x))
+	{
+		TIM67_ClearUpdateItFlag(pTIM67x);
+		TIM67_ApplicaionEventCallback(TIM_6_7_UPDATE_IT);
+	}
+}
 
 void TIM7_IRQHandling(TIM_6_7_RegDef_t *pTIM67x)
 {

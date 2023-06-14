@@ -28,8 +28,6 @@
  * PA6 -> ADC_IN6  potentiometer1
  * PA7 -> ADC_IN7  potentiometer2
  */
-
-RCC_Handle_t rcc;
 ADC_Handle_t ADC_IN;
 DMA_Handle_t dma;
 
@@ -61,6 +59,8 @@ int main(void)
 
 void RCC_Setup(void)
 {
+	RCC_Handle_t rcc;
+
 	rcc.pRCC = RCC;
 	rcc.RCC_Config.RCC_ClockSource = RCC_SOURCE_PLL;
 	rcc.RCC_Config.RCC_PLL_Config.PLL_M = 8;// 16MHz / 8 => 2MHz
@@ -114,8 +114,8 @@ void GPIO_Config(void)
 	buttonPin.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
 	buttonPin.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
 	GPIO_Init(&buttonPin);
-	GPIO_IRQPriorityConfig(IRQ_NO_EXTI15_10, NVIC_IRQ_PRIORITY15);
-	GPIO_IRQInterruptConfig(IRQ_NO_EXTI15_10, ENABLE);
+	IRQPriorityConfig(IRQ_NO_EXTI15_10, NVIC_IRQ_PRIORITY15);
+	IRQInterruptConfig(IRQ_NO_EXTI15_10, ENABLE);
 }
 
 void ADC_Config(void)
@@ -136,7 +136,7 @@ void ADC_Config(void)
 	ADC_ConfigSampRate(ADC_IN.pADCx, channels[2], ADC_480_CYCLES);
 	ADC_SetDisContNumber(ADC_IN.pADCx, ADC_DISC_NUM_3);
 	ADC_SelectEOCFlagTrigger(&ADC_IN);
-	ADC_IRQInterruptConfig(IRQ_NO_ADC, ENABLE);
+	IRQInterruptConfig(IRQ_NO_ADC, ENABLE);
 
 	ADC_ExtTrigDetect(ADC_IN.pADCx, ADC_REGULAR_GROUP, ADC_FALLING_EDGE);
 	ADC_SelectExtEvReg(ADC_IN.pADCx, ADC_REGULAR_GROUP, ADC_EXTI_LINE_11);
@@ -164,7 +164,7 @@ void DMA_Config(void)
 	dma.DMA_Config.DMA_ItEnable.DMA_TEIE = ENABLE;
 	DMA_Init(&dma);
 	DMA_ConfigStream(&dma, REQ_STREAM_2, (uint32_t)&ADC_IN.pADCx->DR, (uint32_t)(data), REQ_STR_CH_1);
-	DMA_IRQInterruptConfig(IRQ_NO_DMA2_STREAM2, ENABLE);
+	IRQInterruptConfig(IRQ_NO_DMA2_STREAM2, ENABLE);
 }
 
 
