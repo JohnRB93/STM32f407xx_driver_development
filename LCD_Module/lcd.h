@@ -1,6 +1,8 @@
 #ifndef LCD_H_
 #define LCD_H_
 
+#include<stdarg.h>
+#include<stdlib.h>
 #include"stm32f407xx.h"
 
 
@@ -98,6 +100,7 @@ void LCD_8BitInit(void);
 
 void LCD_SendChar(uint8_t chr);
 void LCD_SendString(uint8_t *chr, uint8_t length);
+void LCD_Printf(char *chr, ...);
 
 void LCD_SendCommand(uint16_t instruction, uint16_t delayTime);
 

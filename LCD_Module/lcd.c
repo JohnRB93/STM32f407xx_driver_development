@@ -68,6 +68,7 @@ void LCD_4BitInit(void)
 	TIM67_Delay_ms(TIM6, 200);
 
 	while(LCD_ReadBusyFlag());
+	LCD_SendCommand(DISPLAY_ON_OFF(1, 0, 1), DISPLAY_DELAY);
 }
 
 /*
@@ -82,7 +83,29 @@ void LCD_4BitInit(void)
  */
 void LCD_8BitInit(void)
 {
+	lcdBitMode = LCD_8BIT_MODE;
+	LCD_Pins_Init();
+	LCD_Timer_Init();
 
+	TIM67_Delay_ms(TIM6, 41);
+	LCD_SendCommand(FUNCTION_SET(1, 1, 0), FUNC_SET_DELAY);//Function Set
+	TIM67_Delay_ms(TIM6, 5);
+	LCD_SendCommand(FUNCTION_SET(1, 1, 0), FUNC_SET_DELAY);//Function Set
+	TIM67_Delay_us(TIM6, 101);
+	LCD_SendCommand(FUNCTION_SET(1, 1, 0), FUNC_SET_DELAY);//Function Set
+
+	LCD_SendCommand(FUNCTION_SET(1, 1, 0), FUNC_SET_DELAY);//Function Set
+
+	LCD_SendCommand(0b0000001000, DISPLAY_DELAY);//Display off
+
+	LCD_SendCommand(0b0000000001, CLR_DISP_DELAY);//Display clear
+
+	LCD_SendCommand(0b0000000010, ENTRY_MODE_SET_DELAY);//Entry mode set
+
+	TIM67_Delay_ms(TIM6, 200);
+
+	while(LCD_ReadBusyFlag());
+	LCD_SendCommand(DISPLAY_ON_OFF(1, 0, 1), DISPLAY_DELAY);
 }
 
 /*
@@ -121,6 +144,55 @@ void LCD_SendString(uint8_t *chr, uint8_t length)
 		if(i + 1 != length)
 			chr++;
 	}
+}
+
+/*
+ * @fn			- LCD_Printf
+ *
+ * @brief		- This function sends a string of characters to the LCD.
+ *
+ * @param[uint8_t*]	- String to send to the LCD.
+ * @param[uint8_t]	- Length of the string.
+ *
+ * @return		- None.
+ *
+ * @note		- None.
+ */
+void LCD_Printf(char *chr, ...)//TODO: Finish Implementation.
+{
+	va_list args;
+	va_start(args, chr);
+	uint8_t length = 0;
+	uint8_t *str;
+
+	while(*chr != '\0')
+	{
+		length++;
+		chr++;
+	}
+
+	str = (uint8_t*)malloc(length);
+	chr -= length;
+
+	while(*chr != '\0')
+	{
+		if((*chr == '%') && ((*(chr + 1) == 'd') || ((*(chr + 1) == '%'))))
+		{
+			int i = va_arg(args, int);
+			*str = i;
+			str++;
+			chr += 2;
+		}else
+		{
+			*str = *chr;
+			str++;
+			chr++;
+		}
+	}
+
+	str -= length;
+	LCD_SendString(str, length + 1);
+	free(str);
 }
 
 /*
@@ -177,12 +249,12 @@ void LCD_SendCommand(uint16_t instruction, uint16_t delayTime)
 		}
 	}else
 	{//8 bit mode.
-		if(RS_RW == READ_DATA_RAM)
+		if(instruction == READ_DATA_RAM)
 		{//Read Data Ram.
 			lcdDDADDR = LCD_ReadAddrCntr();
 			lcdDDADDR &= ~(1 << 7);
 			return;
-		}else if(RS_RW == READ_BUSY_FLAG_ADDR)
+		}else if(instruction == READ_BUSY_FLAG_ADDR)
 		{//Read Busy Flag.
 			while(LCD_ReadBusyFlag());
 			return;
@@ -243,7 +315,11 @@ uint8_t LCD_GetAddrCntr(void)
 static uint8_t LCD_ReadBusyFlag(void)
 {
 	uint8_t pinStatus = 0;
-	GPIOD->MODER = 0b00000000000101010001010100000000;
+
+	if(lcdBitMode == LCD_4BIT_MODE)
+		GPIOD->MODER = 0b00000000000101010001010100000000;
+	else
+		GPIOD->MODER = 0b00000000000101010001010101010101;
 
 	GPIO_WriteToOutputPin(GPIOD, RS_PIN, RESET);
 	GPIO_WriteToOutputPin(GPIOD, RW_PIN, SET);
@@ -253,7 +329,11 @@ static uint8_t LCD_ReadBusyFlag(void)
 	pinStatus = GPIO_ReadFromInputPin(GPIOD, DB7_PIN);
 	GPIO_WriteToOutputPin(GPIOD, E_PIN, GPIO_PIN_RESET);
 
-	GPIOD->MODER = 0b00000000000101010101010100000000;
+	if(lcdBitMode == LCD_4BIT_MODE)
+		GPIOD->MODER = 0b00000000000101010101010100000000;
+	else
+		GPIOD->MODER = 0b00000000000101010101010101010101;
+
 	GPIO_WriteToOutputPort(GPIOD, RESET);
 	return pinStatus;
 }
@@ -289,6 +369,8 @@ static uint8_t LCD_ReadAddrCntr(void)
 			readValue |= (GPIO_ReadFromInputPin(GPIOD, DB2_PIN) << 2);
 			readValue |= (GPIO_ReadFromInputPin(GPIOD, DB1_PIN) << 1);
 			readValue |= (GPIO_ReadFromInputPin(GPIOD, DB0_PIN) << 0);
+			GPIO_WriteToOutputPin(GPIOD, E_PIN, GPIO_PIN_RESET);
+			TIM67_Delay_us(TIM6, READ_DATA_RAM_DELAY*2);
 			break;
 		}
 		GPIO_WriteToOutputPin(GPIOD, E_PIN, GPIO_PIN_RESET);
@@ -371,25 +453,12 @@ static void LCD_Pins_Init(void)
  * @return		- None.
  *
  * @note		- Private helper function.
- * 				  The system clock will be the maximum available.
+ * 				  It is recommeded to use the maximum clock frequency
+ * 				  for the APB1 bus(42MHz).
  */
 static void LCD_Timer_Init(void)
 {
 	TIM_6_7_Handle_t timer;
-	RCC_Handle_t rcc;
-
-	rcc.pRCC = RCC;
-	rcc.RCC_Config.RCC_ClockSource = RCC_SOURCE_PLL;
-	rcc.RCC_Config.RCC_PLL_Config.PLL_M = 8;// 16MHz / 8 => 2MHz
-	rcc.RCC_Config.RCC_PLL_Config.PLL_N = 168;// 2MHz * 168 => 336MHz
-	rcc.RCC_Config.RCC_PLL_Config.PLL_P = PLL_P_DIV_2;// 336MHz / 2 => 168MHz
-	rcc.RCC_Config.RCC_PLL_Config.PLL_SRC = PLL_SRC_HSI;
-	RCC_ConfigPLLReg(rcc.pRCC, rcc.RCC_Config.RCC_PLL_Config);
-	rcc.RCC_Config.RCC_AHB_Prescaler = 1;// 168MHz / 1 => 168MHz AHB1Bus
-	rcc.RCC_Config.RCC_APB_HSPrescaler = RCC_AHB_DIV_02;// 168MHz / 2 => 84MHz APB2Bus
-	rcc.RCC_Config.RCC_APB_LSPrescaler = RCC_AHB_DIV_04;// 168MHz / 4 => 42MHz APB1Bus
-	RCC_Config(&rcc);
-	RCC_Enable(rcc.pRCC, rcc.RCC_Config);
 
 	timer.pTIMx = TIM6;
 	timer.TIMxConfig.autPreloadReload = TIM_6_7_ARR_NOT_BUFF;
@@ -401,7 +470,7 @@ static void LCD_Timer_Init(void)
 	timer.TIMxConfig.updateIt = TIM_6_7_UPDATE_IT_DI;
 	timer.TIMxConfig.updateSrc = TIM_6_7_CNTR_UG_SMCTRL;
 	//Counter increments every one microsecond.
-	TIM67_Init(&timer, 0, 0xffff, (uint16_t)(RCC_GetPCLK1Value() / 1000000));
+	TIM67_Init(&timer, 0, 0xffff, (uint16_t)(RCC_GetPCLK1Value() / _1MHZ));
 }
 
 /*
