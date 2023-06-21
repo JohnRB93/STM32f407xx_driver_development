@@ -3,6 +3,7 @@
 
 #include<stdarg.h>
 #include<stdlib.h>
+#include<string.h>
 #include"stm32f407xx.h"
 
 
@@ -41,6 +42,8 @@
 #define CHAR_POS_ADDR_4D		0x4D
 #define CHAR_POS_ADDR_4E		0x4E
 #define CHAR_POS_ADDR_4F		0x4F
+
+#define STRING_LIMIT	40
 
 //GPIO Pins.
 #define RS_PIN		GPIO_PIN_NO_8
@@ -100,7 +103,7 @@ void LCD_8BitInit(void);
 
 void LCD_SendChar(uint8_t chr);
 void LCD_SendString(uint8_t *chr, uint8_t length);
-void LCD_Printf(char *chr, ...);
+void LCD_Printf(const char *chr, ...);
 
 void LCD_SendCommand(uint16_t instruction, uint16_t delayTime);
 

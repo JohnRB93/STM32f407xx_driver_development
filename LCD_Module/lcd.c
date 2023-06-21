@@ -25,6 +25,12 @@ static uint8_t LCD_ReadBusyFlag(void);
 static uint8_t LCD_ReadAddrCntr(void);
 static void LCD_ExecuteCommand(void);
 static void LCD_4BitFuncSet(uint8_t cmd);
+static char* convertIntToChar(int value, uint8_t digits);
+static uint8_t findNumDigits(int value);
+static void stringCopy(const char *src, char *dest, uint8_t length);
+static void reverseStringValues(char *chr1, char *chr2);
+static void insertString(char* strToInsert, char* dest, uint8_t index);
+static uint8_t hasFormater(const char* str);
 
 /***************************************************************************************/
 
@@ -149,50 +155,99 @@ void LCD_SendString(uint8_t *chr, uint8_t length)
 /*
  * @fn			- LCD_Printf
  *
- * @brief		- This function sends a string of characters to the LCD.
+ * @brief		- This is a printf-like function to print
+ * 				  strings on the LCD 16x2.
  *
- * @param[uint8_t*]	- String to send to the LCD.
- * @param[uint8_t]	- Length of the string.
+ * @param[char*]	- String to send to the LCD.
+ * @param[...]		- Variable number of arguments.
  *
  * @return		- None.
  *
- * @note		- None.
+ * @note		- It is required to add the null terminating
+ * 				  character '\0' at the end of the string.
+ * 		*** As of this point, this will only work with the %d specifire ***
  */
-void LCD_Printf(char *chr, ...)//TODO: Finish Implementation.
+void LCD_Printf(const char *chr, ...)
 {
-	va_list args;
-	va_start(args, chr);
-	uint8_t length = 0;
-	uint8_t *str;
+	if(hasFormater(chr))
+	{//String has formatting.
+		char *str = (char*)calloc(STRING_LIMIT, sizeof(char));
 
-	while(*chr != '\0')
-	{
-		length++;
-		chr++;
-	}
-
-	str = (uint8_t*)malloc(length);
-	chr -= length;
-
-	while(*chr != '\0')
-	{
-		if((*chr == '%') && ((*(chr + 1) == 'd') || ((*(chr + 1) == '%'))))
+		if(str == NULL)
 		{
-			int i = va_arg(args, int);
-			*str = i;
-			str++;
-			chr += 2;
-		}else
-		{
-			*str = *chr;
-			str++;
-			chr++;
+			LCD_SendString((uint8_t*)"Null Ptr Error.", 15);
+			return;
 		}
-	}
 
-	str -= length;
-	LCD_SendString(str, length + 1);
-	free(str);
+		stringCopy(chr, str, STRING_LIMIT);
+		va_list args;
+		va_start(args, chr);
+		uint8_t numArgs = 0;
+
+		//Find number of format specifiers.
+		for(uint8_t i = 0; i < STRING_LIMIT; i++)
+			if(((*(str + i)) == '%') && ((*(str + (i + 1))) == 'd'))
+				numArgs++;
+
+		int *argsArr = (int*)calloc(numArgs, sizeof(int));
+		if(argsArr == NULL)
+		{
+			LCD_SendString((uint8_t*)"Null Ptr Error.", 15);
+			free(str);
+			return;
+		}
+
+		//Get all variable arguments.
+		for(uint8_t i = 0; i < numArgs; i++)
+			*(argsArr + i) = va_arg(args, int);
+		va_end(args);
+
+		uint8_t *indexes = (uint8_t*)calloc(numArgs, sizeof(uint8_t));
+		if(indexes == NULL)
+		{
+			LCD_SendString((uint8_t*)"Null Ptr Error.", 15);
+			free(str);
+			free(argsArr);
+			return;
+		}
+
+		uint8_t j = 0;
+
+		//Get indexes of format specifiers.
+		for(uint8_t i = 0; *(str + i) != '\0'; i++)
+			if(((*(str + i)) == '%') && ((*(str + (i + 1))) == 'd'))
+				*(indexes + j++) = i;
+
+		j = 0;
+		for(uint8_t i = 0; *(str + i) != '\0'; i++)
+		{
+			if(((*(str + i)) == '%') && ((*(str + (i + 1))) == 'd'))
+			{
+				char *strDigits = (char*)calloc(findNumDigits(*(argsArr + j)), sizeof(char));
+				strDigits = convertIntToChar(*(argsArr + j), findNumDigits(*(argsArr + j)));//Digits to insert as char[];
+				j++;
+				if(strDigits == NULL)
+				{
+					LCD_SendString((uint8_t*)"Null Ptr Error.", 15);
+					return;
+				}
+				insertString(strDigits, str, i);
+			}
+		}
+
+		j = 0;
+		for(uint8_t i = 0; *(str + i) != '\0'; i++)
+			j++;
+
+		LCD_SendString((uint8_t*)str, j + 1);
+		//Deallocate dynamically allocated memory.
+		free(str);
+		free(indexes);
+		free(argsArr);
+	}else
+	{//Just a string with no formatting.
+		LCD_SendString((uint8_t*)chr, (uint8_t)strlen(chr) + 1);
+	}
 }
 
 /*
@@ -510,6 +565,187 @@ static void LCD_4BitFuncSet(uint8_t cmd)
 	GPIO_WriteToOutputPin(GPIOD, DB4_PIN, ((cmd >> 0) & 0x1));
 	LCD_ExecuteCommand();
 	TIM67_Delay_us(TIM6, FUNC_SET_DELAY*2);
+}
+
+/*
+ * @fn			- convertIntToChar
+ *
+ * @brief		- This function converts an int value
+ * 				  to a char array/pointer.
+ *
+ * @param[int]		- Value to be converted.
+ * @param[uint8_t]	- Number of digits the value has.
+ *
+ * @return		- None.
+ *
+ * @note		- Private helper function.
+ */
+static char* convertIntToChar(int value, uint8_t digits)
+{
+	if(value <= 9)
+	{
+		char *str = (char*)calloc(1, sizeof(char));
+		if(str == NULL)
+			return NULL;
+
+		*str = (char)(value + 48);
+		*(str + 1) = '\0';
+		return str;
+	}else
+	{
+		char *numStr = (char*)calloc(digits, sizeof(char));
+
+		if(numStr == NULL)
+			return NULL;
+
+		int d = value;
+		int r = 0;
+		int i = 0;
+
+		do{
+			r = d % 10;
+			d /= 10;
+			*(numStr + i) = (char)(r + 48);
+			i++;
+		}while(d != 0);
+
+		*(numStr + digits) = '\0';
+		reverseStringValues(numStr, numStr + (i - 1));
+
+		return numStr;
+	}
+	return NULL;
+}
+
+/*
+ * @fn			- findNumDigits
+ *
+ * @brief		- This function returns the number
+ * 				  of digits from the value provided
+ * 				  in the argument.
+ *
+ * @param[int]		- Integer value.
+ *
+ * @return		- (int)Number of digits the value has.
+ *
+ * @note		- Private helper function.
+ */
+static uint8_t findNumDigits(int value)
+{
+	uint32_t temp = (uint32_t)value, r = 0;
+	uint8_t i = 0;
+	do{
+		r = temp / 10;
+		temp = r;
+		i++;
+	}while(r != 0);
+
+	return i;
+}
+
+/*
+ * @fn			- stringCopy
+ *
+ * @brief		- This function copies the contents of a
+ * 				  char pointer/array into another char
+ * 				  pointer/array.
+ *
+ * @param[const char*]	- Source char pointer/array.
+ * @param[char]			- Destination char pointer/array.
+ * @param[uint8_t]		- Length of the destination array.
+ *
+ * @return		- None.
+ *
+ * @note		- Private helper function.
+ */
+static void stringCopy(const char *src, char *dest, uint8_t destLen)
+{
+	for(uint8_t i = 0; i < destLen; i++)
+	{
+		*(dest + i) = *(src + i);
+	}
+}
+
+/*
+ * @fn			- reverseStringValues
+ *
+ * @brief		- This function reverses the contents
+ * 				  in the provided range of a char
+ * 				  array/pointer.
+ *
+ * @param[char*]	- Pointer to start of char range.
+ * @param[char*]	- Pointer to end of char range.
+ *
+ * @return		- None.
+ *
+ * @note		- Private helper function.
+ */
+static void reverseStringValues(char *chr1, char *chr2)
+{
+	if(chr1 == chr2)
+		return;
+	else if((chr1 + 1) == chr2)
+	{
+		char temp = *chr1;
+		*chr1 = *chr2;
+		*chr2 = temp;
+		return;
+	}else
+	{
+		char temp = *chr1;
+		*chr1 = *chr2;
+		*chr2 = temp;
+		chr1++;
+		chr2--;
+		reverseStringValues(chr1, chr2);
+	}
+}
+
+/*
+ * @fn			- insertString
+ *
+ * @brief		- This function inserts a "string" into
+ * 				  another "string at the provided index.
+ *
+ * @param[char*]	- Pointer to the "string" to insert.
+ * @param[char*]	- Pointer to the receiving "string".
+ * @param[uint8_t]	- Index to insert the "string".
+ *
+ * @return		- None.
+ *
+ * @note		- Private helper function.
+ */
+static void insertString(char* strToInsert, char* dest, uint8_t index)
+{
+	uint8_t insLen = strlen(strToInsert);
+	*(dest + (index + insLen)) = '\0';
+
+	for (uint8_t i = index; i < (index + insLen); i++)
+		*(dest + i) = *(strToInsert + (i - index));
+}
+
+/*
+ * @fn			- hasFormater
+ *
+ * @brief		- This function determines if a char
+ * 				  pointer/array has a format specifier
+ * 				  or not.
+ *
+ * @param[const char*]	- Char array/pointer to check.
+ *
+ * @return		- 1 if there is a format specifire, otherwise
+ * 				  0.
+ *
+ * @note		- Private helper function.
+ */
+static uint8_t hasFormater(const char* str)
+{
+	for(uint8_t i = 0; i < (uint8_t)strlen(str); i++)
+	{
+		if(((*(str + i)) == '%') && ((*(str + (i + 1))) == 'd'))
+			return 1;
+	}
+	return 0;
 }
 
 /***************************************************************************************/

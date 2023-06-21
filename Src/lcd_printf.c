@@ -9,7 +9,27 @@ int main(void)
 	RCC_Setup();
 	LCD_8BitInit();
 
-	LCD_Printf("Data: %d", 9);
+	LCD_SendCommand(SET_DDRAM_ADDR(CHAR_POS_ADDR_00), SET_DDRAM_ADDR_DELAY);
+	LCD_Printf("Data: None.");
+	LCD_SendCommand(SET_DDRAM_ADDR(CHAR_POS_ADDR_40), SET_DDRAM_ADDR_DELAY);
+	LCD_Printf("Data: %d\0", 1);
+	LCD_SendCommand(SET_DDRAM_ADDR(CHAR_POS_ADDR_00), SET_DDRAM_ADDR_DELAY);
+	LCD_Printf("Data: %d\0", 12);
+	LCD_SendCommand(SET_DDRAM_ADDR(CHAR_POS_ADDR_40), SET_DDRAM_ADDR_DELAY);
+	LCD_Printf("Data: %d\0", 123);
+	LCD_SendCommand(SET_DDRAM_ADDR(CHAR_POS_ADDR_00), SET_DDRAM_ADDR_DELAY);
+	LCD_Printf("Data: %d\0", 1234);
+	LCD_SendCommand(SET_DDRAM_ADDR(CHAR_POS_ADDR_40), SET_DDRAM_ADDR_DELAY);
+	LCD_Printf("Data: %d\0", 12345);
+	LCD_SendCommand(SET_DDRAM_ADDR(CHAR_POS_ADDR_00), SET_DDRAM_ADDR_DELAY);
+	LCD_Printf("Data: %d\0", 123456);
+	LCD_SendCommand(SET_DDRAM_ADDR(CHAR_POS_ADDR_40), SET_DDRAM_ADDR_DELAY);
+	LCD_Printf("Data: %d\0", 1234567);
+	LCD_SendCommand(SET_DDRAM_ADDR(CHAR_POS_ADDR_00), SET_DDRAM_ADDR_DELAY);
+	LCD_Printf("Data: %d\0", 12345678);
+	LCD_SendCommand(SET_DDRAM_ADDR(CHAR_POS_ADDR_40), SET_DDRAM_ADDR_DELAY);
+	LCD_Printf("Data: %d\0", 123456789);
+
 
 	while(1);
 }
