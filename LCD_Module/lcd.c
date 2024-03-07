@@ -25,6 +25,7 @@ static uint8_t LCD_ReadBusyFlag(void);
 static uint8_t LCD_ReadAddrCntr(void);
 static void LCD_ExecuteCommand(void);
 static void LCD_4BitFuncSet(uint8_t cmd);
+static void LCD_SetScrollingMode(void);
 static char* convertIntToChar(int value, uint8_t digits);
 static uint8_t findNumDigits(int value);
 static void stringCopy(const char *src, char *dest, uint8_t length);
@@ -112,6 +113,7 @@ void LCD_8BitInit(void)
 
 	while(LCD_ReadBusyFlag());
 	LCD_SendCommand(DISPLAY_ON_OFF(1, 0, 1), DISPLAY_DELAY);
+	LCD_SendCommand(RETURN_HOME, RETURN_HOME_DELAY);
 }
 
 /*
@@ -136,20 +138,29 @@ void LCD_SendChar(uint8_t chr)
  * @brief		- This function sends a string of characters to the LCD.
  *
  * @param[uint8_t*]	- String to send to the LCD.
+ * @param[uint8_t]  - Row number of the screen to print the string to.
  * @param[uint8_t]	- Length of the string.
  *
  * @return		- None.
  *
  * @note		- None.
  */
-void LCD_SendString(uint8_t *chr, uint8_t length)
+void LCD_SendString(uint8_t *chr, uint8_t row, uint8_t length)
 {
+	if(row == TOP_ROW)
+		LCD_SendCommand(SET_DDRAM_ADDR(CHAR_POS_ADDR_00), SET_DDRAM_ADDR_DELAY);
+	else
+		LCD_SendCommand(SET_DDRAM_ADDR(CHAR_POS_ADDR_40), SET_DDRAM_ADDR_DELAY);
+
 	for(uint8_t i = 0; i < length - 1; i++)
 	{
 		LCD_SendChar(*chr);
 		if(i + 1 != length)
 			chr++;
 	}
+
+	if(length > (uint8_t)16)
+		LCD_SetScrollingMode();
 }
 
 /*
@@ -165,23 +176,30 @@ void LCD_SendString(uint8_t *chr, uint8_t length)
  *
  * @note		- It is required to add the null terminating
  * 				  character '\0' at the end of the string.
- * 		*** As of this point, this will only work with the %d specifire ***
+ * 		*** As of this point, this will only work with the %d specifier ***
  */
-void LCD_Printf(const char *chr, ...)
+void LCD_Printf(const char *chr, uint8_t row, ...)
 {
+	//Check if string is too long.
+	if((uint8_t)strlen(chr) + 1 > 40)
+	{
+		LCD_SendString((uint8_t*)"Error!", TOP_ROW, 7);
+		LCD_SendString((uint8_t*)"Too many characters", BOTTOM_ROW, 20);
+	}
+
 	if(hasFormater(chr))
 	{//String has formatting.
 		char *str = (char*)calloc(STRING_LIMIT, sizeof(char));
 
 		if(str == NULL)
 		{
-			LCD_SendString((uint8_t*)"Null Ptr Error.", 15);
+			LCD_SendString((uint8_t*)"Null Ptr Error.", row, 15);
 			return;
 		}
 
 		stringCopy(chr, str, STRING_LIMIT);
 		va_list args;
-		va_start(args, chr);
+		va_start(args, row);
 		uint8_t numArgs = 0;
 
 		//Find number of format specifiers.
@@ -192,7 +210,7 @@ void LCD_Printf(const char *chr, ...)
 		int *argsArr = (int*)calloc(numArgs, sizeof(int));
 		if(argsArr == NULL)
 		{
-			LCD_SendString((uint8_t*)"Null Ptr Error.", 15);
+			LCD_SendString((uint8_t*)"Null Ptr Error.", row, 15);
 			free(str);
 			return;
 		}
@@ -205,7 +223,7 @@ void LCD_Printf(const char *chr, ...)
 		uint8_t *indexes = (uint8_t*)calloc(numArgs, sizeof(uint8_t));
 		if(indexes == NULL)
 		{
-			LCD_SendString((uint8_t*)"Null Ptr Error.", 15);
+			LCD_SendString((uint8_t*)"Null Ptr Error.", row, 15);
 			free(str);
 			free(argsArr);
 			return;
@@ -228,7 +246,7 @@ void LCD_Printf(const char *chr, ...)
 				j++;
 				if(strDigits == NULL)
 				{
-					LCD_SendString((uint8_t*)"Null Ptr Error.", 15);
+					LCD_SendString((uint8_t*)"Null Ptr Error.", row, 15);
 					return;
 				}
 				insertString(strDigits, str, i);
@@ -239,14 +257,14 @@ void LCD_Printf(const char *chr, ...)
 		for(uint8_t i = 0; *(str + i) != '\0'; i++)
 			j++;
 
-		LCD_SendString((uint8_t*)str, j + 1);
+		LCD_SendString((uint8_t*)str, row, j + 1);
 		//Deallocate dynamically allocated memory.
 		free(str);
 		free(indexes);
 		free(argsArr);
 	}else
 	{//Just a string with no formatting.
-		LCD_SendString((uint8_t*)chr, (uint8_t)strlen(chr) + 1);
+		LCD_SendString((uint8_t*)chr, row, (uint8_t)strlen(chr) + 1);
 	}
 }
 
@@ -565,6 +583,26 @@ static void LCD_4BitFuncSet(uint8_t cmd)
 	GPIO_WriteToOutputPin(GPIOD, DB4_PIN, ((cmd >> 0) & 0x1));
 	LCD_ExecuteCommand();
 	TIM67_Delay_us(TIM6, FUNC_SET_DELAY*2);
+}
+
+/*
+ * @fn			- LCD_SetScrollingMode
+ *
+ * @brief		- This function sets the scrolling function in
+ * 				  the LCD.
+ *
+ * @return		- None.
+ *
+ * @note		- Private helper function.
+ * 				  Useful whenever the string is larger than 16 chars.
+ */
+static void LCD_SetScrollingMode(void)
+{
+	while(1)
+	{
+		LCD_SendCommand(CURSOR_DISP_SHIFT(1, 0), E_DELAY * 2);
+		TIM67_Delay_ms(TIM6, 1000);
+	}
 }
 
 /*

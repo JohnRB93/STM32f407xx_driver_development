@@ -12,10 +12,10 @@
 /**********************************************************************************************************************/
 /********************************************* How to use this library ************************************************/
 /* (*) Reset and Clock Control                                                                                        */
-/* At the start of any application, the RCC Handle Structure must be delared and have its configuration structure     */
+/* At the start of any application, the RCC Handle Structure must be declared and have its configuration structure     */
 /* programmed with appropriate configuration settings as per need. It is recommended to do this in a seperate         */
 /* function.                                                                                                          */
-/* If the PLL clock is to be used, then the pll configuration sturcture within the rcc configuration structure must   */
+/* If the PLL clock is to be used, then the pll configuration structure within the rcc configuration structure must   */
 /* also be programmed with appropriate settings as per need. Details can be found in the rcc driver.h and .c files.   */
 /* Once the configurations have been set, call the RCC_Enable function and pass a reference to the rcc peripheral     */
 /* register and the rcc configuration structure. The RCC is now configured and ready to be used for enabling other    */

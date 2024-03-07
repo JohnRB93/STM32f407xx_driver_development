@@ -43,6 +43,10 @@
 #define CHAR_POS_ADDR_4E		0x4E
 #define CHAR_POS_ADDR_4F		0x4F
 
+//Row numbers
+#define TOP_ROW		0
+#define BOTTOM_ROW	1
+
 #define STRING_LIMIT	40
 
 //GPIO Pins.
@@ -102,8 +106,8 @@ void LCD_4BitInit(void);
 void LCD_8BitInit(void);
 
 void LCD_SendChar(uint8_t chr);
-void LCD_SendString(uint8_t *chr, uint8_t length);
-void LCD_Printf(const char *chr, ...);
+void LCD_SendString(uint8_t *chr, uint8_t row, uint8_t length);
+void LCD_Printf(const char *chr, uint8_t row, ...);
 
 void LCD_SendCommand(uint16_t instruction, uint16_t delayTime);
 
