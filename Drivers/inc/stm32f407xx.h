@@ -13,7 +13,7 @@
 /********************************************* How to use this library ************************************************/
 /* (*) Reset and Clock Control                                                                                        */
 /* At the start of any application, the RCC Handle Structure must be declared and have its configuration structure     */
-/* programmed with appropriate configuration settings as per need. It is recommended to do this in a seperate         */
+/* programmed with appropriate configuration settings as per need. It is recommended to do this in a separate         */
 /* function.                                                                                                          */
 /* If the PLL clock is to be used, then the pll configuration structure within the rcc configuration structure must   */
 /* also be programmed with appropriate settings as per need. Details can be found in the rcc driver.h and .c files.   */
@@ -22,16 +22,16 @@
 /* peripherals.                                                                                                       */
 /*                                                                                                                    */
 /* (*) Embedded Flash Memory Interface (Flash)                                                                        */
-/* */
+/*     Not Implemented Yet                                                                                            */
 /* (*) Power Controller (PWR)                                                                                         */
-/* */
+/*     Not Implemented Yet                                                                                            */
 /* (*) General Port Input Output (GPIO)                                                                               */
 /* To configure a GPIO pin, the user application will need to initialize a GPIO_Handle_t structure and program the    */
 /* GPIO_PinConfig_t structure as per need. The pin mode will need to be configured to the following:                  */
 /*   *Input Mode                                                                                                      */
 /*   *Output Mode                                                                                                     */
 /*   *Alternate Function Mode                                                                                         */
-/*     *To know which functions are multiplexed on each GPIO pin, refer to the datasheets.                            */
+/*     *To know which functions are multiplexed on each GPIO pin, refer to the data sheets.                           */
 /*   *Analog Mode                                                                                                     */
 /*   *Interrupt Mode (Falling Edge, Rising Edge, Falling and Rising Edge)                                             */
 /* For Input Mode:                                                                                                    */
@@ -61,11 +61,11 @@
 /* (*) Digital to Analog Conversion (DAC)                                                                             */
 /* */
 /* (*) Serial Peripheral Interface (SPI)                                                                              */
-/* */
+/*     Not Implemented Yet                                                                                            */
 /* (*) Inter-Intergrated Circuit Interface (I2C)                                                                      */
-/* */
+/*     Not Implemented Yet                                                                                            */
 /* (*) Universal Synchronous Asynchronous Receiver Transmitter (USART)                                                */
-/* */
+/*     Not Implemented Yet                                                                                            */
 
 /* Common Abbreviations:                                                                                              */
 /* *IT or It -> Interrupt                                                                                             */
@@ -1489,9 +1489,9 @@ void IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority);
 
 /*********************Driver includes*********************/
 #include"stm32f407xx_gpio_driver.h"
-#include"stm32f407xx_spi_driver.h"
-#include"stm32f407xx_i2c_driver.h"
-#include"stm32f407xx_usart_driver.h"
+//#include"stm32f407xx_spi_driver.h"
+//#include"stm32f407xx_i2c_driver.h"
+//#include"stm32f407xx_usart_driver.h"
 #include"stm32f407xx_rcc_driver.h"
 #include"stm32f407xx_adc_driver.h"
 #include"stm32f407xx_dma_driver.h"
