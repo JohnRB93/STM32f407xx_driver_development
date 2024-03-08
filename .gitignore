@@ -11,3 +11,9 @@ App_Config_Func_Formats/
 *.Id
 *.list
 *.ld
+stm32f407xx_i2c_driver.h
+stm32f407xx_i2c_driver.c
+stm32f407xx_spi_driver.h
+stm32f407xx_spi_driver.c
+stm32f407xx_usart_driver.h
+stm32f407xx_usart_driver.c
